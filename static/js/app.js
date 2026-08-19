@@ -9,7 +9,7 @@ const i18n = {
     outputArchive: "出力アーカイブ", browse: "参照", detectedProfile: "検出プロファイル", storage: "ストレージ",
     logicalProcessors: "論理プロセッサ", memory: "メモリ", files: "ファイル",
     autoSettings: "自動設定", compressionLevel: "圧縮レベル", threads: "スレッド", solid: "ソリッド圧縮", sortType: "種類順ソート",
-    parallelJobs: "推奨並列ジョブ", autoExplanation: "分析結果に応じて設定理由を表示します。", securityAndSplit: "暗号化と分割",
+    autoExplanation: "分析結果に応じて設定理由を表示します。", securityAndSplit: "暗号化と分割",
     encrypt: "AES-256暗号化", encryptHelp: "パスワードをコマンドラインへ表示しません", password: "パスワード", confirmPassword: "パスワード確認",
     encryptFileNames: "ファイル名も暗号化", splitVolume: "分割ボリューム", noSplit: "分割しない", splitHelp: "分割は高速化ではなく、搬送・保存制限のための機能です。",
     start: "圧縮を開始", cancel: "中止", ready: "準備完了", resultRatio: "圧縮後", elapsed: "経過", independent: "7-Zipとは独立したアプリケーションです",
@@ -26,7 +26,7 @@ const i18n = {
     outputArchive: "Output archive", browse: "Browse", detectedProfile: "Detected profile", storage: "Storage",
     logicalProcessors: "logical processors", memory: "Memory", files: "Files",
     autoSettings: "Automatic settings", compressionLevel: "Compression level", threads: "Threads", solid: "Solid compression", sortType: "Sort by type",
-    parallelJobs: "Recommended parallel jobs", autoExplanation: "The reason for each setting appears after analysis.", securityAndSplit: "Encryption and splitting",
+    autoExplanation: "The reason for each setting appears after analysis.", securityAndSplit: "Encryption and splitting",
     encrypt: "AES-256 encryption", encryptHelp: "The password is not exposed in the command line", password: "Password", confirmPassword: "Confirm password",
     encryptFileNames: "Encrypt file names", splitVolume: "Split volumes", noSplit: "Do not split", splitHelp: "Splitting is for transport and storage limits; it does not improve speed.",
     start: "Start compression", cancel: "Cancel", ready: "Ready", resultRatio: "Result", elapsed: "Elapsed", independent: "Independent application; not affiliated with 7-Zip",
@@ -129,7 +129,6 @@ function updateAnalysis(data) {
   $("threadsValue").textContent = data.threads;
   $("solidValue").textContent = data.solid ? t("on") : t("off");
   $("sortValue").textContent = data.sortByType ? t("on") : t("off");
-  $("jobsValue").textContent = `${data.jobs} ${t("jobs")}`;
   const smallPercent = data.files ? Math.round(data.smallFiles * 100 / data.files) : 0;
   const storedPercent = data.bytes ? Math.round(data.compressedBytes * 100 / data.bytes) : 0;
   $("analysisNote").textContent = `${smallPercent}% small · ${storedPercent}% Copy · ${data.inaccessible} inaccessible · ${data.reparsePoints} reparse points`;

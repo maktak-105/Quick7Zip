@@ -13,12 +13,12 @@ int main() {
     smallFiles.totalBytes = 2ull * 1024 * 1024 * 1024;
     smallFiles.topLevelDirectoryCount = 20;
     const auto plan = ChoosePlan(ssd, smallFiles);
-    if (plan.compressionLevel != 1 || !plan.solid || !plan.sortByType || plan.recommendedJobs != 2) return 1;
+    if (plan.compressionLevel != 1 || !plan.solid || !plan.sortByType) return 1;
 
     SystemProfile hdd = ssd;
     hdd.driveKind = DriveKind::Hdd;
     const auto hddPlan = ChoosePlan(hdd, smallFiles);
-    if (hddPlan.sortByType || hddPlan.recommendedJobs != 1) return 2;
+    if (hddPlan.sortByType) return 2;
 
     if (!IsAlreadyCompressedPath(L"photo.JPEG") || !IsAlreadyCompressedPath(L"book.epub") ||
         !IsAlreadyCompressedPath(L"sheet.xlsm") || !IsAlreadyCompressedPath(L"video.mkv")) return 8;

@@ -18,5 +18,3 @@ Quick7Zip stores file types that can be identified as already compressed with hi
 ## Deliberately excluded
 
 `pdf iso avi mov tiff tif dmg vhd vhdx` can vary substantially by content or encoding and are not classified as Copy from their extension alone. Legacy Office `doc xls ppt`, commonly uncompressed audio `wav aiff`, and bitmap `bmp` remain LZMA2 candidates.
-
-A future content classifier can supplement extension matching with a small compression probe or entropy estimate.

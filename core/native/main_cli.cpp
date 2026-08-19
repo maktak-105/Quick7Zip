@@ -54,7 +54,7 @@ void PrintProfile(const SystemProfile& system, const FileProfile& files, const O
                << L", solid=" << (plan.solid ? L"on" : L"off")
                << L", sort-by-type=" << (plan.sortByType ? L"on" : L"off")
                << L", hybrid=" << (plan.useHybridMethods ? L"on" : L"off")
-               << L", jobs=" << plan.recommendedJobs << L"\n";
+               << L"\n";
 }
 
 } // namespace

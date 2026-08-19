@@ -47,7 +47,6 @@ struct OptimizationPlan {
     bool solid = true;
     bool sortByType = false;
     bool useHybridMethods = false;
-    unsigned recommendedJobs = 1;
     std::wstring reason;
 };
 

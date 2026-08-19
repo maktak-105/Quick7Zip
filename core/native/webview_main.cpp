@@ -188,7 +188,6 @@ std::wstring ProfileJson(const std::wstring& path, const SystemProfile& system,
          << L",\"solid\":" << (plan.solid ? L"true" : L"false")
          << L",\"sortByType\":" << (plan.sortByType ? L"true" : L"false")
          << L",\"hybrid\":" << (plan.useHybridMethods ? L"true" : L"false")
-         << L",\"jobs\":" << plan.recommendedJobs
          << L",\"reason\":\"" << JsonEscape(plan.reason) << L"\"}";
     return json.str();
 }

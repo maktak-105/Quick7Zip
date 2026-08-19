@@ -319,9 +319,6 @@ OptimizationPlan ChoosePlan(const SystemProfile& system, const FileProfile& file
     plan.solid = true;
     plan.sortByType = system.driveKind == DriveKind::Ssd && smallShare >= 0.50;
     plan.useHybridMethods = files.compressedLikeFileCount > 0;
-    plan.recommendedJobs = (system.driveKind == DriveKind::Ssd && system.logicalProcessors >= 8 &&
-                            memoryGiB >= 8 && files.topLevelDirectoryCount >= 2) ? 2 : 1;
-
     std::wstringstream reason;
     reason << L"level=" << plan.compressionLevel << L";threads=" << plan.threads
            << L";small_share=" << std::fixed << std::setprecision(1) << smallShare * 100.0
