@@ -193,6 +193,16 @@ $("inputPath").addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); requestAnalysis(); }
 });
 $("encryptToggle").addEventListener("change", () => $("passwordArea").classList.toggle("hidden", !$("encryptToggle").checked));
+document.querySelectorAll(".password-visibility").forEach((button) => {
+  button.addEventListener("click", () => {
+    const input = $(button.dataset.target);
+    const visible = input.type === "text";
+    input.type = visible ? "password" : "text";
+    button.textContent = visible ? "表示" : "隠す";
+    button.setAttribute("aria-label", visible ? "パスワードを表示" : "パスワードを隠す");
+    input.focus();
+  });
+});
 $("startButton").addEventListener("click", () => {
   const input = $("inputPath").value.trim(), output = $("outputPath").value.trim();
   if (!input || !output) return alert(t("selectPaths"));

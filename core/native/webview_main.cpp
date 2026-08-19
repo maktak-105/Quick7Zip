@@ -428,7 +428,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     wc.lpszClassName = className;
     RegisterClassExW(&wc);
     g_window = CreateWindowExW(0, className, L"Quick7Zip", WS_OVERLAPPEDWINDOW,
-                               CW_USEDEFAULT, CW_USEDEFAULT, 760, 700,
+                               CW_USEDEFAULT, CW_USEDEFAULT, 620, 700,
                                nullptr, nullptr, instance, nullptr);
     if (!g_window) { CoUninitialize(); return 2; }
     SendMessageW(g_window, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(wc.hIcon));

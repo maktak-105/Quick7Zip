@@ -9,7 +9,7 @@
         </div>
       </div>
       <div class="header-run">
-        <button id="startButton" class="primary-button start-button" type="button" disabled><span data-i18n="start">圧縮を開始</span><b>→</b></button>
+        <button id="startButton" class="primary-button start-button" type="button" disabled><span data-i18n="start">圧縮を開始</span></button>
         <button id="cancelButton" class="danger-button hidden" type="button" data-i18n="cancel">中止</button>
         <div class="progress-copy">
           <strong id="statusText" data-i18n="ready">準備完了</strong>
@@ -75,8 +75,8 @@
             </label>
             <div id="passwordArea" class="password-area hidden">
               <div class="password-fields">
-                <input id="password" type="password" autocomplete="new-password" data-i18n-placeholder="password">
-                <input id="passwordConfirm" type="password" autocomplete="new-password" data-i18n-placeholder="confirmPassword">
+                <div class="password-field"><input id="password" type="password" autocomplete="new-password" data-i18n-placeholder="password"><button class="password-visibility" type="button" data-target="password">表示</button></div>
+                <div class="password-field"><input id="passwordConfirm" type="password" autocomplete="new-password" data-i18n-placeholder="confirmPassword"><button class="password-visibility" type="button" data-target="passwordConfirm">表示</button></div>
               </div>
               <label class="check-line"><input id="encryptHeaders" type="checkbox" checked><span data-i18n="encryptFileNames">ファイル名も暗号化</span></label>
             </div>
