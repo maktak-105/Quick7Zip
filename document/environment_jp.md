@@ -17,7 +17,7 @@
 build.bat
 ```
 
-UIを`index.html`へ統合し、ネイティブエンジンを`Quick7Zip_cli.exe`と`Quick7Zip.exe`へ静的リンクして、`WebView2Loader.dll`を`dist\binary`へコピーします。
+UIをビルド用の中間`dist\binary\index.html`へ統合してから`Quick7Zip.exe`へ埋め込み、ネイティブエンジンを`Quick7Zip_cli.exe`と`Quick7Zip.exe`へ静的リンクし、`WebView2Loader.dll`を`dist\binary`へコピーします。
 
 ## 手動検証
 
@@ -34,4 +34,4 @@ CLI暗号化は`--encrypt`でパスワードを対話入力します。スクリ
 - `WebView2.h`がない：`WEBVIEW2_INCLUDE`をSDKの`build\native\include`へ設定。
 - ローダーがない：`WEBVIEW2_LOADER`をx64版`WebView2Loader.dll`へ設定。
 - 7-Zipが見つからない：7-Zip公式サイトからx64版をインストール。
-- GUIが白い：`index.html`、`Quick7Zip.exe`、`WebView2Loader.dll`を同じ場所へ配置。
+- GUIが白い：再ビルドして埋め込みUIを更新してください。実行時に別途`index.html`は不要です。

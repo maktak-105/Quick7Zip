@@ -17,7 +17,7 @@ The validated compiler is the WinGet package `BrechtSanders.WinLibs.MCF.UCRT`. T
 build.bat
 ```
 
-The script bundles the UI into `index.html`, statically links the native engine into `Quick7Zip_cli.exe` and `Quick7Zip.exe`, and copies `WebView2Loader.dll` into `dist\binary`.
+The build script bundles the UI into an intermediate `dist\binary\index.html`, embeds that resource into `Quick7Zip.exe`, statically links the native engine into `Quick7Zip_cli.exe` and `Quick7Zip.exe`, and copies `WebView2Loader.dll` into `dist\binary`.
 
 ## Manual verification
 
@@ -34,4 +34,4 @@ Encrypted CLI runs use `--encrypt` and prompt for the password. Do not add passw
 - Missing `WebView2.h`: set `WEBVIEW2_INCLUDE` to the SDK `build\native\include` directory.
 - Missing loader: set `WEBVIEW2_LOADER` to the x64 `WebView2Loader.dll`.
 - 7-Zip not found: install the x64 edition from the official 7-Zip site.
-- Blank GUI: keep `index.html`, `Quick7Zip.exe`, and `WebView2Loader.dll` in the same directory.
+- Blank GUI: rebuild so the bundled UI resource is refreshed; runtime does not require a separate `index.html`.
