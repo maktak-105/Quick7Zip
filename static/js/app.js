@@ -38,7 +38,8 @@ const i18n = {
   }
 };
 
-let language = localStorage.getItem("quick7zip-language") || "ja";
+let language = "ja";
+try { language = localStorage.getItem("quick7zip-language") || "ja"; } catch (_) { /* NavigateToString may have an opaque origin. */ }
 let analyzedPath = "";
 let engineFound = false;
 let busy = false;
@@ -178,7 +179,11 @@ webview?.addEventListener("message", ({data}) => {
   }
 });
 
-$("languageButton").addEventListener("click", () => { language = language === "ja" ? "en" : "ja"; localStorage.setItem("quick7zip-language", language); applyLanguage(); });
+$("languageButton").addEventListener("click", () => {
+  language = language === "ja" ? "en" : "ja";
+  try { localStorage.setItem("quick7zip-language", language); } catch (_) { /* Optional preference storage. */ }
+  applyLanguage();
+});
 $("browseInput").addEventListener("click", () => post({type: "browse_input"}));
 $("browseOutput").addEventListener("click", () => post({type: "browse_output"}));
 $("inputPath").addEventListener("input", () => { if ($("inputPath").value !== analyzedPath) analyzedPath = ""; updateStartState(); });
