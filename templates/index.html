@@ -11,11 +11,6 @@
       <div class="header-run">
         <button id="startButton" class="primary-button start-button" type="button" disabled><span data-i18n="start">圧縮を開始</span></button>
         <button id="cancelButton" class="danger-button hidden" type="button" data-i18n="cancel">中止</button>
-        <div class="progress-copy">
-          <strong id="statusText" data-i18n="ready">準備完了</strong>
-          <span class="progress-meta"><span id="progressText">0%</span><span id="elapsedText">—</span></span>
-        </div>
-        <div class="progress-track"><div id="progressBar"></div></div>
       </div>
       <div class="header-actions">
         <span id="engineBadge" class="badge pending">7-Zipを確認中</span>
@@ -92,6 +87,14 @@
             </select>
           </div>
         </div>
+      </section>
+
+      <section class="run-status panel">
+        <div class="progress-copy">
+          <strong id="statusText" data-i18n="ready">準備完了</strong>
+          <span class="progress-meta"><span id="progressText">0%</span><span id="elapsedText">—</span></span>
+        </div>
+        <div class="progress-track"><div id="progressBar"></div></div>
       </section>
 
       <pre id="logOutput" aria-live="polite"></pre>

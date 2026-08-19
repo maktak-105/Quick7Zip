@@ -92,15 +92,14 @@ h1 {
   gap: 6px;
 }
 .header-run {
-  display: grid;
-  grid-template-columns: auto auto minmax(150px, 1fr);
+  display: flex;
   align-items: center;
-  gap: 6px 8px;
+  gap: 6px;
   min-width: 0;
 }
-.header-run .progress-track {
-  grid-column: 1 / -1;
-  margin-top: -2px;
+.run-status {
+  margin-top: 6px;
+  padding: 8px 10px;
 }
 .badge {
   padding: 5px 8px;
@@ -417,6 +416,15 @@ select:focus {
   min-width: 0;
   text-align: left;
   overflow: hidden;
+}
+.run-status .progress-copy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.run-status .progress-copy .progress-meta {
+  justify-content: flex-end;
 }
 .progress-copy strong {
   display: block;
