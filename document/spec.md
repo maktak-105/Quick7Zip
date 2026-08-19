@@ -7,6 +7,8 @@ Quick7Zip is a Windows 10/11 x64 application that analyzes a source folder or dr
 
 At startup Quick7Zip detects the installed 7-Zip executable and accepts version 26.02 or newer; older or missing installations are rejected.
 
+The adaptive plan currently selects compression level, thread count, solid mode, type sorting, and Copy/LZMA2 handling. Dictionary size, word size, and solid block size are deliberately left to the installed 7-Zip defaults; Quick7Zip does not claim benchmark-based optimization for those parameters.
+
 The UI uses a compact 710 px maximum width. Folder selection starts analysis immediately; direct path entry starts it on Enter or focus change. No separate Analyze button or idle analysis prompt is shown.
 
 ## Architecture

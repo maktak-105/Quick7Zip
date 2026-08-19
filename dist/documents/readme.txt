@@ -25,6 +25,7 @@ Important behavior
 ------------------
 - Quick7Zip does not bundle 7-Zip. It detects the user's installed 7z.exe.
 - An existing output archive is replaced when explicitly selected; output inside the input folder is still rejected.
+- Dictionary size, word size, and solid block size use the installed 7-Zip defaults rather than Quick7Zip benchmark tuning.
 - Encryption passwords are sent to 7-Zip through standard input, not command-line arguments.
 - Split volumes are one logical archive and do not improve compression speed.
 - Compression is not a substitute for a verified backup or a system image.

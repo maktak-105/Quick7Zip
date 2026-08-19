@@ -9,6 +9,7 @@ Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It
 
 - Detects the installed `7z.exe`; 7-Zip is not bundled.
 - Selects compression level, thread count, solid mode, and type sorting from the actual workload.
+- Uses 7-Zip's own defaults for dictionary size, word size, and solid block size; these parameters are not benchmark-tuned by Quick7Zip.
 - Supports AES-256 encryption and encrypted file names.
 - Sends encryption passwords over the child process standard input, not as command-line arguments.
 - Explains the selected profile instead of hiding it behind an unexplained "Auto" button.
