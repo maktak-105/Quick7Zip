@@ -1,0 +1,22 @@
+Quick7Zip - Third-party software notices
+
+7-Zip
+-----
+Quick7Zip detects and launches a copy of 7-Zip that the user has installed
+separately. Quick7Zip does not bundle, modify, or redistribute 7-Zip binaries.
+7-Zip is Copyright (C) Igor Pavlov and is primarily licensed under GNU LGPL
+version 2.1 or later. Some 7z.dll code is under BSD licenses and the unRAR
+license restriction. See the authoritative license information at:
+
+https://www.7-zip.org/license.txt
+https://www.7-zip.org/
+
+Quick7Zip is an independent application and is not affiliated with or endorsed
+by Igor Pavlov or the 7-Zip project.
+
+Microsoft WebView2
+------------------
+The distribution includes WebView2Loader.dll from the Microsoft.Web.WebView2
+SDK. The loader is not the WebView2 Runtime. See WEBVIEW2_LICENSE.txt and
+WEBVIEW2_NOTICE.txt in this package. Microsoft Edge WebView2 Runtime is installed
+and serviced separately by Microsoft.

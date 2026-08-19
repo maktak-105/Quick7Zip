@@ -1,0 +1,23 @@
+# Python build helpers
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# Native intermediate files
+core/native/*.dll
+core/native/*.o
+tests/*.exe
+
+# Distribution binaries
+dist/binary/*
+!dist/binary/.gitkeep
+
+# Logs and local tooling
+*.log
+*.dat
+.vscode/
+.idea/
+CODEX_PROJECT_NOTE.txt
+*.WebView2/

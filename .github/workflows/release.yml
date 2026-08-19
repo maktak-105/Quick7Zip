@@ -1,0 +1,77 @@
+name: Build and upload distribution asset
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to update, for example v1.0.0'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install MinGW and Python
+        shell: pwsh
+        run: choco install mingw python --yes --no-progress
+      - name: Install pinned WebView2 SDK
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP 'webview2.nupkg'
+          $archive = Join-Path $env:RUNNER_TEMP 'webview2.zip'
+          $directory = Join-Path $env:RUNNER_TEMP 'webview2'
+          Invoke-WebRequest 'https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2/1.0.4129.50' -OutFile $package
+          dotnet nuget verify $package --all
+          if ($LASTEXITCODE -ne 0) { throw 'WebView2 NuGet signature verification failed' }
+          Copy-Item -LiteralPath $package -Destination $archive
+          Expand-Archive -LiteralPath $archive -DestinationPath $directory -Force
+          "WEBVIEW2_INCLUDE=$directory\build\native\include" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "WEBVIEW2_LOADER=$directory\build\native\x64\WebView2Loader.dll" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Build
+        shell: pwsh
+        run: |
+          $env:PYTHONIOENCODING = 'utf-8'
+          python build_native.py
+          if ($LASTEXITCODE -ne 0) { throw 'Native build failed' }
+      - name: Package flat distribution
+        shell: pwsh
+        run: |
+          $files = @(
+            'dist/binary/Quick7Zip.exe',
+            'dist/binary/Quick7Zip_cli.exe',
+            'dist/binary/WebView2Loader.dll',
+            'dist/binary/index.html',
+            'dist/documents/readme.txt',
+            'dist/documents/readme_jp.txt',
+            'dist/documents/history.txt',
+            'dist/documents/history_jp.txt',
+            'dist/documents/LICENSE.txt',
+            'dist/documents/LICENSE_jp.txt',
+            'dist/documents/THIRD_PARTY_NOTICES.txt',
+            'dist/documents/WEBVIEW2_LICENSE.txt',
+            'dist/documents/WEBVIEW2_NOTICE.txt'
+          )
+          foreach ($file in $files) { if (!(Test-Path -LiteralPath $file)) { throw "Missing distribution file: $file" } }
+          $staging = Join-Path $env:RUNNER_TEMP 'Quick7Zip-package'
+          New-Item -ItemType Directory -Path $staging -Force | Out-Null
+          foreach ($file in $files) { Copy-Item -LiteralPath $file -Destination $staging -Force }
+          Compress-Archive -Path (Join-Path $staging '*') -DestinationPath (Join-Path $env:GITHUB_WORKSPACE 'Quick7Zip-binary.zip') -Force
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          files: Quick7Zip-binary.zip
+          overwrite_files: true
+          generate_release_notes: true
+          body: |
+            Quick7Zip development release.
+
+            Install the current 64-bit 7-Zip separately, extract every file from `Quick7Zip-binary.zip` into one folder, and run `Quick7Zip.exe`.

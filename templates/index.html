@@ -1,0 +1,105 @@
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <img class="brand-mark" src="static/img/quick7zip-icon.png" alt="" aria-hidden="true">
+        <div>
+          <h1>Quick7Zip</h1>
+          <p data-i18n="tagline">環境とデータに合わせて、7-Zipを自動最適化</p>
+        </div>
+      </div>
+      <div class="header-run">
+        <button id="startButton" class="primary-button start-button" type="button" disabled><span data-i18n="start">圧縮を開始</span><b>→</b></button>
+        <button id="cancelButton" class="danger-button hidden" type="button" data-i18n="cancel">中止</button>
+        <div class="progress-copy">
+          <strong id="statusText" data-i18n="ready">準備完了</strong>
+          <span class="progress-meta"><span id="progressText">0%</span><span id="elapsedText">—</span></span>
+        </div>
+        <div class="progress-track"><div id="progressBar"></div></div>
+      </div>
+      <div class="header-actions">
+        <span id="engineBadge" class="badge pending">7-Zipを確認中</span>
+        <button id="languageButton" class="ghost-button" type="button">English</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel paths-panel">
+        <div class="section-title">
+          <div><span class="step">01</span><h3 data-i18n="sourceAndOutput">対象と出力先</h3></div>
+        </div>
+        <label class="field-label" for="inputPath" data-i18n="inputFolder">圧縮するフォルダ／ドライブ</label>
+        <div class="path-row">
+          <input id="inputPath" type="text" spellcheck="false" placeholder="C:\Data">
+          <button id="browseInput" class="secondary-button" type="button" data-i18n="browse">参照</button>
+        </div>
+        <label class="field-label" for="outputPath" data-i18n="outputArchive">出力アーカイブ</label>
+        <div class="path-row output-row">
+          <input id="outputPath" type="text" spellcheck="false" placeholder="D:\Backup\archive.7z">
+          <button id="browseOutput" class="secondary-button" type="button" data-i18n="browse">参照</button>
+        </div>
+      </section>
+
+      <div class="dashboard-grid">
+        <section class="panel profile-panel">
+          <div class="section-title"><div><span class="step">02</span><h3 data-i18n="detectedProfile">検出プロファイル</h3></div></div>
+          <div class="metric-grid">
+            <article><span data-i18n="storage">ストレージ</span><strong id="driveValue">—</strong><small id="driveRoot">—</small></article>
+            <article><span>CPU</span><strong id="cpuValue">—</strong><small data-i18n="logicalProcessors">論理プロセッサ</small></article>
+            <article><span data-i18n="memory">メモリ</span><strong id="memoryValue">—</strong><small>RAM</small></article>
+            <article><span data-i18n="files">ファイル</span><strong id="filesValue">—</strong><small id="sizeValue">—</small></article>
+          </div>
+          <div class="analysis-note hidden" id="analysisNote"></div>
+        </section>
+
+        <section class="panel plan-panel">
+          <div class="section-title"><div><span class="step">03</span><h3 data-i18n="autoSettings">自動設定</h3></div><span class="auto-chip">AUTO</span></div>
+          <div class="setting-list">
+            <div><span data-i18n="compressionLevel">圧縮レベル</span><strong id="levelValue">—</strong></div>
+            <div><span data-i18n="threads">スレッド</span><strong id="threadsValue">—</strong></div>
+            <div><span data-i18n="solid">ソリッド圧縮</span><strong id="solidValue">—</strong></div>
+            <div><span data-i18n="sortType">種類順ソート</span><strong id="sortValue">—</strong></div>
+            <div><span data-i18n="parallelJobs">推奨並列ジョブ</span><strong id="jobsValue">—</strong></div>
+          </div>
+          <p id="planReason" class="plan-reason" data-i18n="autoExplanation">分析結果に応じて設定理由を表示します。</p>
+        </section>
+      </div>
+
+      <section class="panel options-panel">
+        <div class="section-title"><div><span class="step">04</span><h3 data-i18n="securityAndSplit">暗号化と分割</h3></div></div>
+        <div class="option-grid">
+          <div class="option-card encryption-card">
+            <label class="switch-line">
+              <span><strong data-i18n="encrypt">AES-256暗号化</strong><small data-i18n="encryptHelp">パスワードをコマンドラインへ表示しません</small></span>
+              <input id="encryptToggle" type="checkbox"><i></i>
+            </label>
+            <div id="passwordArea" class="password-area hidden">
+              <div class="password-fields">
+                <input id="password" type="password" autocomplete="new-password" data-i18n-placeholder="password">
+                <input id="passwordConfirm" type="password" autocomplete="new-password" data-i18n-placeholder="confirmPassword">
+              </div>
+              <label class="check-line"><input id="encryptHeaders" type="checkbox" checked><span data-i18n="encryptFileNames">ファイル名も暗号化</span></label>
+            </div>
+          </div>
+          <div class="option-card">
+            <label class="field-label" for="splitSize" data-i18n="splitVolume">分割ボリューム</label>
+            <select id="splitSize">
+              <option value="none" data-i18n="noSplit">分割しない</option>
+              <option value="650m">650 MiB</option>
+              <option value="3900m">3.9 GiB (FAT32)</option>
+              <option value="10g">10 GiB</option>
+              <option value="25g">25 GiB</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <pre id="logOutput" aria-live="polite"></pre>
+    </main>
+
+    <footer>
+      <span>Quick7Zip v0.1.0</span>
+      <span data-i18n="independent">7-Zipとは独立したアプリケーションです</span>
+    </footer>
+  </div>
+</body>

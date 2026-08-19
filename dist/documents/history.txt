@@ -1,0 +1,5 @@
+Quick7Zip - Change log
+
+v0.1.0 (2026-08-19)
+- Initial adaptive compression analysis and 7-Zip execution.
+- Added GUI, CLI, AES-256 encryption, split volumes, progress, and cancellation.
