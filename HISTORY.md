@@ -7,6 +7,12 @@
 - Second digit: bug fixes
 - Third digit: documentation and other changes
 
+## 1.0.0 (2026-08-19)
+
+- First stable release of the native WebView2 GUI and CLI.
+- Complete adaptive compression workflow with automatic analysis, hybrid storage, encryption, splitting, progress, ratio, and elapsed-time reporting.
+- Compact horizontal default layout with bilingual UI and distribution documentation.
+
 ## 0.1.0 (2026-08-19)
 
 - Initial native engine, WebView2 GUI, and CLI.

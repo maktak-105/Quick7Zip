@@ -3,7 +3,7 @@
 
 Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It analyzes storage type, CPU, memory, file count, total size, and file composition before selecting practical compression options.
 
-> Development preview v0.1.0. No public binary release has been published yet.
+> Stable release v1.0.0.
 
 ## What makes it different
 
@@ -20,7 +20,7 @@ Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It
 ## Requirements
 
 - Windows 10 or 11 (64-bit)
-- 7-Zip installed separately; the current development baseline is 7-Zip 26.02 or newer
+- 7-Zip installed separately; the supported baseline is 7-Zip 26.02 or newer
 - Microsoft Edge WebView2 Runtime
 
 ## Build

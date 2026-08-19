@@ -1,7 +1,7 @@
 # Quick7Zip バージョン情報
 [English about.md](about.md)
 
-- バージョン：v0.1.0開発プレビュー
+- バージョン：v1.0.0正式リリース
 - 対象：Windows 10/11 x64
 - 表示言語：日本語／English
 - 技術：C++17、Win32 API、WebView2、HTML/CSS/バニラJavaScript

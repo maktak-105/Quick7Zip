@@ -1,5 +1,5 @@
 Quick7Zip - Windows向け7-Zip自動最適化フロントエンド
-配布パッケージ  v0.1.0 開発プレビュー
+配布パッケージ  v1.0.0 正式リリース
 
 GitHub
 ------
@@ -16,7 +16,7 @@ https://github.com/maktak-105/Quick7Zip
 1. Quick7Zip.exe、WebView2Loader.dll、index.htmlを同じフォルダへ置きます。
 2. Quick7Zip.exeを管理者権限なしで起動します。
 3. 圧縮対象のフォルダ／ドライブと、出力.7zファイルを指定します。
-4. 分析を実行し、自動選択された設定を確認して圧縮を開始します。
+4. 自動分析された設定を確認して圧縮を開始します。
 5. 必要に応じてAES-256暗号化と分割ボリュームを有効にします。
 
 CLIはQuick7Zip_cli.exeです。`Quick7Zip_cli.exe --help`でオプションを表示します。

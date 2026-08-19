@@ -3,7 +3,7 @@
 
 ## Overview
 
-Quick7Zip is a Windows 10/11 x64 application that analyzes a source folder or drive and runs an existing 7-Zip installation with adaptive options. Version: v0.1.0 development preview.
+Quick7Zip is a Windows 10/11 x64 application that analyzes a source folder or drive and runs an existing 7-Zip installation with adaptive options. Version: v1.0.0 stable release.
 
 The UI uses a compact 710 px maximum width. Folder selection starts analysis immediately; direct path entry starts it on Enter or focus change. No separate Analyze button or idle analysis prompt is shown.
 
@@ -29,7 +29,7 @@ Inputs include logical CPU count, physical memory, seek-penalty storage detectio
 - Type sorting is enabled for SSD workloads dominated by small files, but disabled for HDDs.
 - Formats identified as already compressed with high confidence use `Copy`; other files use LZMA2 in a hybrid archive.
 - Because 7-Zip cannot update split volumes, mixed split workloads safely fall back to one LZMA2 pass.
-- Two independent jobs are recommended only for capable SSD systems. v0.1.0 reports this recommendation but executes one archive per operation.
+- Two independent jobs are recommended only for capable SSD systems. v1.0.0 reports this recommendation but executes one archive per operation.
 
 See [already-compressed extensions](compressed_extensions.md) for classification details.
 
