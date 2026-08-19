@@ -52,7 +52,7 @@ button:disabled {
 .app-shell {
   max-width: 568px;
   margin: 0 auto;
-  padding: 8px 9px 7px;
+  padding: 6px 8px 7px;
 }
 .topbar {
   display: grid;
@@ -489,7 +489,7 @@ footer {
   display: none !important;
 }
 
-@media (max-width: 620px) {
+@media (max-width: 520px) {
   .app-shell {
     padding: 8px;
   }
