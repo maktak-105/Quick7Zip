@@ -33,6 +33,20 @@ std::mutex g_profileMutex;
 std::wstring g_analyzedPath;
 SystemProfile g_system;
 FileProfile g_files;
+
+std::wstring LoadBundledHtml(HINSTANCE instance) {
+    HRSRC resource = FindResourceW(instance, MAKEINTRESOURCEW(201), RT_RCDATA);
+    if (!resource) return {};
+    HGLOBAL handle = LoadResource(instance, resource);
+    const DWORD size = SizeofResource(instance, resource);
+    const char* bytes = handle ? static_cast<const char*>(LockResource(handle)) : nullptr;
+    if (!bytes || !size) return {};
+    const int chars = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, bytes, static_cast<int>(size), nullptr, 0);
+    if (!chars) return {};
+    std::wstring html(static_cast<size_t>(chars), L'\\0');
+    MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, bytes, static_cast<int>(size), html.data(), chars);
+    return html;
+}
 OptimizationPlan g_plan;
 
 std::wstring JsonEscape(const std::wstring& value) {
@@ -349,13 +363,9 @@ public:
         }
         EventRegistrationToken token{};
         g_webview->add_WebMessageReceived(new WebMessageHandler(), &token);
-        wchar_t exePath[MAX_PATH * 4]{};
-        GetModuleFileNameW(nullptr, exePath, static_cast<DWORD>(std::size(exePath)));
-        const fs::path html = fs::path(exePath).parent_path() / L"index.html";
-        wchar_t uri[32768]{};
-        DWORD uriLength = static_cast<DWORD>(std::size(uri));
-        if (SUCCEEDED(UrlCreateFromPathW(html.c_str(), uri, &uriLength, 0))) g_webview->Navigate(uri);
-        else MessageBoxW(g_window, L"index.html was not found.", L"Quick7Zip", MB_ICONERROR);
+        const std::wstring html = LoadBundledHtml(GetModuleHandleW(nullptr));
+        if (!html.empty()) g_webview->NavigateToString(html.c_str());
+        else MessageBoxW(g_window, L"Bundled UI resource could not be loaded.", L"Quick7Zip", MB_ICONERROR);
         return S_OK;
     }
 };

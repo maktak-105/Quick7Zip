@@ -36,7 +36,8 @@ build.bat
 - `Quick7Zip.exe`
 - `Quick7Zip_cli.exe`
 - `WebView2Loader.dll`
-- `index.html`
+
+GUIのHTML/CSS/JavaScript UIは`Quick7Zip.exe`へ埋め込まれており、別途`index.html`を配置する必要はありません。
 
 ## CLI
 

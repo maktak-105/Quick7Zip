@@ -13,7 +13,7 @@ Requirements
 
 Usage
 -----
-1. Keep Quick7Zip.exe, WebView2Loader.dll, and index.html together.
+1. Keep Quick7Zip.exe and WebView2Loader.dll together. The GUI is embedded in Quick7Zip.exe.
 2. Run Quick7Zip.exe without administrator privileges.
 3. Select a folder or drive and an output .7z archive.
 4. Analyze the source, review the automatically selected profile, and start compression.
@@ -32,7 +32,6 @@ Distribution files
 ------------------
 - Quick7Zip.exe / Quick7Zip_cli.exe
 - WebView2Loader.dll
-- index.html
 - readme.txt / readme_jp.txt
 - history.txt / history_jp.txt
 - LICENSE.txt / LICENSE_jp.txt

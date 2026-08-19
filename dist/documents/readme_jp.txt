@@ -13,7 +13,7 @@ https://github.com/maktak-105/Quick7Zip
 
 使い方
 ------
-1. Quick7Zip.exe、WebView2Loader.dll、index.htmlを同じフォルダへ置きます。
+1. Quick7Zip.exeとWebView2Loader.dllを同じフォルダへ置きます。GUIはQuick7Zip.exeに埋め込まれています。
 2. Quick7Zip.exeを管理者権限なしで起動します。
 3. 圧縮対象のフォルダ／ドライブと、出力.7zファイルを指定します。
 4. 自動分析された設定を確認して圧縮を開始します。
@@ -32,7 +32,6 @@ CLIはQuick7Zip_cli.exeです。`Quick7Zip_cli.exe --help`でオプションを�
 ------------
 - Quick7Zip.exe / Quick7Zip_cli.exe
 - WebView2Loader.dll
-- index.html
 - readme.txt / readme_jp.txt
 - history.txt / history_jp.txt
 - LICENSE.txt / LICENSE_jp.txt

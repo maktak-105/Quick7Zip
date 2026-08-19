@@ -1,6 +1,7 @@
 #include <windows.h>
 
 101 ICON "Quick7Zip.ico"
+201 RCDATA "../../dist/binary/index.html"
 1 RT_MANIFEST "Quick7Zip.manifest"
 
 VS_VERSION_INFO VERSIONINFO

@@ -36,7 +36,8 @@ Outputs are created in `dist\binary`:
 - `Quick7Zip.exe`
 - `Quick7Zip_cli.exe`
 - `WebView2Loader.dll`
-- `index.html`
+
+The GUI HTML/CSS/JavaScript UI is embedded in `Quick7Zip.exe`; no separate `index.html` is required.
 
 ## CLI
 
