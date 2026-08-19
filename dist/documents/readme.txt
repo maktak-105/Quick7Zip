@@ -24,6 +24,7 @@ The CLI is Quick7Zip_cli.exe. Run `Quick7Zip_cli.exe --help` for its options.
 Important behavior
 ------------------
 - Quick7Zip does not bundle 7-Zip. It detects the user's installed 7z.exe.
+- An existing output archive is replaced when explicitly selected; output inside the input folder is still rejected.
 - Encryption passwords are sent to 7-Zip through standard input, not command-line arguments.
 - Split volumes are one logical archive and do not improve compression speed.
 - Compression is not a substitute for a verified backup or a system image.

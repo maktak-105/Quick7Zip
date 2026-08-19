@@ -15,6 +15,7 @@ Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It
 - Stores JPEG, modern media, current Office files, and existing archives with `Copy`, while compressing other files with LZMA2.
 - Updates elapsed compression time every 0.2 seconds and preserves the final time after completion.
 - Analyzes immediately after folder selection; direct path entry triggers analysis on Enter or focus change, without a separate Analyze button.
+- Replaces an explicitly selected existing output archive, while still rejecting outputs inside the input folder or equal to the input file.
 - Provides Japanese and English UI, GUI and CLI from one native engine.
 
 ## Requirements

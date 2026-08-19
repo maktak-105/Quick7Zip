@@ -344,9 +344,6 @@ std::wstring ValidateArchiveRequest(const ArchiveRequest& request) {
     const fs::path parent = output.parent_path();
     std::error_code ec;
     if (!parent.empty() && !fs::is_directory(parent, ec)) return L"output_directory_missing";
-    if (GetFileAttributesW(request.outputPath.c_str()) != INVALID_FILE_ATTRIBUTES) return L"output_exists";
-    if (!request.volumeSize.empty() && request.volumeSize != L"none" &&
-        GetFileAttributesW((request.outputPath + L".001").c_str()) != INVALID_FILE_ATTRIBUTES) return L"output_exists";
     if (request.encrypt && request.password.empty()) return L"password_empty";
     return {};
 }
@@ -378,6 +375,27 @@ struct HybridFileLists {
     std::uint64_t compressBytes = 0;
     std::uint64_t storeBytes = 0;
 };
+
+bool RemoveExistingArchiveOutputs(const ArchiveRequest& request) {
+    auto removeFile = [](const std::wstring& path) {
+        const DWORD attributes = GetFileAttributesW(path.c_str());
+        if (attributes == INVALID_FILE_ATTRIBUTES) return true;
+        if (attributes & FILE_ATTRIBUTE_DIRECTORY) return false;
+        return DeleteFileW(path.c_str()) != FALSE;
+    };
+    if (!removeFile(request.outputPath)) return false;
+    if (!request.volumeSize.empty() && request.volumeSize != L"none") {
+        for (unsigned part = 1;; ++part) {
+            std::wstringstream suffix;
+            suffix << L'.' << std::setfill(L'0') << std::setw(3) << part;
+            const std::wstring path = request.outputPath + suffix.str();
+            const DWORD attributes = GetFileAttributesW(path.c_str());
+            if (attributes == INVALID_FILE_ATTRIBUTES) break;
+            if ((attributes & FILE_ATTRIBUTE_DIRECTORY) || !DeleteFileW(path.c_str())) return false;
+        }
+    }
+    return true;
+}
 
 bool IsReparsePoint(const fs::path& path) {
     const DWORD attributes = GetFileAttributesW(path.c_str());
@@ -621,6 +639,7 @@ int RunArchive(const ArchiveRequest& request, std::atomic_bool& cancel, const Pr
     if (!ValidateArchiveRequest(request).empty()) return -3;
     HybridFileLists lists;
     if (!CollectHybridFileLists(request.inputPath, lists, cancel)) return cancel.load() ? ERROR_CANCELLED : -4;
+    if (!RemoveExistingArchiveOutputs(request)) return -6;
 
     const bool hasCompress = !lists.compress.empty();
     const bool hasStore = !lists.store.empty();
