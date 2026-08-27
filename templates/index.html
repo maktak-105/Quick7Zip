@@ -13,7 +13,7 @@
         <button id="cancelButton" class="danger-button hidden" type="button" data-i18n="cancel">中止</button>
       </div>
       <div class="header-actions">
-        <span id="engineBadge" class="badge pending">7-Zipを確認中</span>
+        <button id="helpButton" class="icon-button" type="button" aria-label="ヘルプ">?</button>
         <button id="languageButton" class="ghost-button" type="button">English</button>
       </div>
     </header>
@@ -100,8 +100,40 @@
     </main>
 
     <footer>
-      <span>Quick7Zip v1.0.0</span>
+      <span>Quick7Zip v1.1.1</span>
+      <span id="engineBadge" class="badge pending">7-Zipを確認中</span>
       <span data-i18n="independent">7-Zipとは独立したアプリケーションです</span>
     </footer>
+  </div>
+
+  <div id="helpModal" class="modal-overlay hidden">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2 data-i18n="helpTitle">Quick7Zipの使い方</h2>
+        <button id="helpClose" class="icon-button" type="button" aria-label="閉じる">×</button>
+      </div>
+      <ol class="help-steps">
+        <li data-i18n="helpStep1">圧縮したいフォルダ／ドライブと、出力する.7zファイルを指定します。</li>
+        <li data-i18n="helpStep2">自動分析された設定(圧縮レベル・スレッド数など)を確認します。</li>
+        <li data-i18n="helpStep3">必要に応じてAES-256暗号化・分割ボリュームを設定します。</li>
+        <li data-i18n="helpStep4">「圧縮を開始」を押すと7-Zipが実行されます。</li>
+      </ol>
+      <p class="help-note" data-i18n="helpNote">Quick7Zipは7-Zip本体を同梱しません。あらかじめ7-Zip 26.02以降をインストールしてください。</p>
+      <button id="aboutLink" class="ghost-button about-link" type="button" data-i18n="aboutLink">バージョン情報</button>
+    </div>
+  </div>
+
+  <div id="aboutModal" class="modal-overlay hidden">
+    <div class="modal-panel about-panel">
+      <h2 class="about-name">Quick7Zip</h2>
+      <p class="about-version">Ver. 1.1.1</p>
+      <hr class="about-divider">
+      <p class="about-heading" data-i18n="aboutEnvHeading">[開発環境]</p>
+      <p class="about-body" data-i18n="aboutEnvBody">MinGW-w64 (g++) / Win32 API / Microsoft Edge WebView2</p>
+      <p class="about-heading" data-i18n="aboutAuthorHeading">[制作者]</p>
+      <p class="about-body">maktak-105 (GitHub: https://github.com/maktak-105)</p>
+      <img class="about-badge" src="assets/maktak105-V04-01.jpg" alt="Jûgo / @maktak105">
+      <button id="aboutClose" class="secondary-button about-ok" type="button">OK</button>
+    </div>
   </div>
 </body>

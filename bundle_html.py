@@ -17,6 +17,12 @@ def bundle(output_dir=None):
         'src="static/img/quick7zip-icon.png"',
         f'src="data:image/png;base64,{icon_data}"',
     )
+    with open(os.path.join(base_dir, "assets", "maktak105-V04-01.jpg"), "rb") as stream:
+        badge_data = base64.b64encode(stream.read()).decode("ascii")
+    html = html.replace(
+        'src="assets/maktak105-V04-01.jpg"',
+        f'src="data:image/jpeg;base64,{badge_data}"',
+    )
 
     body_match = re.search(r"<body[^>]*>(.*)</body>", html, flags=re.DOTALL | re.IGNORECASE)
     if not body_match:

@@ -7,6 +7,14 @@
 - Second digit: bug fixes
 - Third digit: documentation and other changes
 
+## 1.1.1 (2026-08-27)
+
+- Add a help button in the header (usage guide and version display), and move the 7-Zip version badge to the footer center.
+- Add an About dialog (version, environment, and author) reachable from the help menu.
+- Fix window size appearing inconsistent across monitors with different DPI, caused by missing `WM_DPICHANGED` handling.
+- Automatically resize the window to fit the actual content height instead of using a fixed size, so switching between Japanese and English no longer breaks the layout.
+- Fix the split-volume dropdown being truncated in English.
+
 ## 1.0.0 (2026-08-19)
 
 - First stable release of the native WebView2 GUI and CLI.

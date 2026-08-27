@@ -1,5 +1,11 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0A00
+#endif
+#ifndef WINVER
+#define WINVER 0x0A00
+#endif
 #include <windows.h>
 #include <shlobj.h>
 #include <shobjidl.h>
@@ -24,6 +30,8 @@ namespace fs = std::filesystem;
 namespace {
 
 constexpr UINT WM_Q7Z_JSON = WM_APP + 41;
+constexpr int kBaseWindowWidth = 620;
+constexpr int kBaseWindowHeight = 620;
 HWND g_window = nullptr;
 ICoreWebView2Controller* g_controller = nullptr;
 ICoreWebView2* g_webview = nullptr;
@@ -118,6 +126,36 @@ bool JsonBool(const std::wstring& json, const std::wstring& key, bool fallback =
     if (pos == std::wstring::npos) return fallback;
     while (++pos < json.size() && iswspace(json[pos])) {}
     return json.compare(pos, 4, L"true") == 0;
+}
+
+double JsonNumber(const std::wstring& json, const std::wstring& key, double fallback = 0) {
+    const std::wstring marker = L"\"" + key + L"\"";
+    std::size_t pos = json.find(marker);
+    if (pos == std::wstring::npos) return fallback;
+    pos = json.find(L':', pos + marker.size());
+    if (pos == std::wstring::npos) return fallback;
+    ++pos;
+    while (pos < json.size() && iswspace(json[pos])) ++pos;
+    const std::size_t start = pos;
+    if (pos < json.size() && (json[pos] == L'-' || json[pos] == L'+')) ++pos;
+    while (pos < json.size() && (iswdigit(json[pos]) || json[pos] == L'.')) ++pos;
+    if (pos == start) return fallback;
+    try { return std::stod(json.substr(start, pos - start)); } catch (...) { return fallback; }
+}
+
+void ResizeToContentHeight(int clientHeight) {
+    if (!g_window || clientHeight <= 0) return;
+    RECT clientRect{};
+    GetClientRect(g_window, &clientRect);
+    const int clientWidth = clientRect.right - clientRect.left;
+    const UINT dpi = GetDpiForWindow(g_window);
+    const int scaledHeight = MulDiv(clientHeight, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
+    RECT windowRect{0, 0, clientWidth, scaledHeight};
+    const DWORD style = static_cast<DWORD>(GetWindowLongPtrW(g_window, GWL_STYLE));
+    const DWORD exStyle = static_cast<DWORD>(GetWindowLongPtrW(g_window, GWL_EXSTYLE));
+    AdjustWindowRectExForDpi(&windowRect, style, FALSE, exStyle, dpi);
+    SetWindowPos(g_window, nullptr, 0, 0, windowRect.right - windowRect.left, windowRect.bottom - windowRect.top,
+                 SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
 std::wstring PickFolder() {
@@ -311,6 +349,8 @@ void HandleWebMessage(const std::wstring& json) {
         BeginArchive(json);
     } else if (type == L"cancel") {
         g_cancel.store(true);
+    } else if (type == L"resize") {
+        ResizeToContentHeight(static_cast<int>(JsonNumber(json, L"height", 0)));
     }
 }
 
@@ -392,6 +432,15 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
         case WM_SIZE:
             if (g_controller) { RECT bounds{}; GetClientRect(window, &bounds); g_controller->put_Bounds(bounds); }
             return 0;
+        case WM_DPICHANGED: {
+            const RECT* suggested = reinterpret_cast<RECT*>(lParam);
+            if (suggested) {
+                SetWindowPos(window, nullptr, suggested->left, suggested->top,
+                             suggested->right - suggested->left, suggested->bottom - suggested->top,
+                             SWP_NOZORDER | SWP_NOACTIVATE);
+            }
+            return 0;
+        }
         case WM_Q7Z_JSON: {
             auto* json = reinterpret_cast<std::wstring*>(lParam);
             if (g_webview && json) g_webview->PostWebMessageAsJson(json->c_str());
@@ -437,9 +486,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     wc.lpszClassName = className;
     RegisterClassExW(&wc);
     g_window = CreateWindowExW(0, className, L"Quick7Zip", WS_OVERLAPPEDWINDOW,
-                               CW_USEDEFAULT, CW_USEDEFAULT, 620, 700,
+                               CW_USEDEFAULT, CW_USEDEFAULT, kBaseWindowWidth, kBaseWindowHeight,
                                nullptr, nullptr, instance, nullptr);
     if (!g_window) { CoUninitialize(); return 2; }
+    const UINT windowDpi = GetDpiForWindow(g_window);
+    if (windowDpi != USER_DEFAULT_SCREEN_DPI) {
+        SetWindowPos(g_window, nullptr, 0, 0,
+                     MulDiv(kBaseWindowWidth, windowDpi, USER_DEFAULT_SCREEN_DPI),
+                     MulDiv(kBaseWindowHeight, windowDpi, USER_DEFAULT_SCREEN_DPI),
+                     SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
     SendMessageW(g_window, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(wc.hIcon));
     SendMessageW(g_window, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(wc.hIconSm));
     ShowWindow(g_window, show);

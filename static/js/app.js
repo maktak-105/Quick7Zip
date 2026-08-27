@@ -17,7 +17,12 @@ const i18n = {
     on: "有効", off: "無効", jobs: "ジョブ", fast: "高速", balanced: "バランス", hybrid: "形式別", passwordMismatch: "パスワードが一致しません。",
     selectPaths: "入力フォルダと出力先を指定してください。", reanalyze: "入力が変わりました。もう一度分析してください。", engineMissing: "7-Zipが見つかりません", engineOld: "7-Zip 26.02以降へ更新してください",
     output_exists: "出力ファイルが既に存在します。別の名前を指定してください。", output_inside_input: "出力先を圧縮対象フォルダの外に指定してください。",
-    output_directory_missing: "出力先フォルダが存在しません。", input_missing: "入力パスが存在しません。", password_empty: "パスワードを入力してください。"
+    output_directory_missing: "出力先フォルダが存在しません。", input_missing: "入力パスが存在しません。", password_empty: "パスワードを入力してください。",
+    helpTitle: "Quick7Zipの使い方", helpStep1: "圧縮したいフォルダ／ドライブと、出力する.7zファイルを指定します。",
+    helpStep2: "自動分析された設定(圧縮レベル・スレッド数など)を確認します。", helpStep3: "必要に応じてAES-256暗号化・分割ボリュームを設定します。",
+    helpStep4: "「圧縮を開始」を押すと7-Zipが実行されます。", helpNote: "Quick7Zipは7-Zip本体を同梱しません。あらかじめ7-Zip 26.02以降をインストールしてください。",
+    aboutLink: "バージョン情報", aboutEnvHeading: "[開発環境]", aboutEnvBody: "MinGW-w64 (g++) / Win32 API / Microsoft Edge WebView2",
+    aboutAuthorHeading: "[制作者]"
   },
   en: {
     tagline: "Automatically tunes installed 7-Zip for your data and PC", autoProfile: "AUTO PROFILE",
@@ -34,7 +39,12 @@ const i18n = {
     on: "On", off: "Off", jobs: "jobs", fast: "Fast", balanced: "Balanced", hybrid: "Hybrid", passwordMismatch: "Passwords do not match.",
     selectPaths: "Select an input folder and output archive.", reanalyze: "The input changed. Analyze it again.", engineMissing: "7-Zip was not found", engineOld: "Update to 7-Zip 26.02 or newer",
     output_exists: "The output already exists. Choose a new file name.", output_inside_input: "Choose an output location outside the input folder.",
-    output_directory_missing: "The output directory does not exist.", input_missing: "The input path does not exist.", password_empty: "Enter a password."
+    output_directory_missing: "The output directory does not exist.", input_missing: "The input path does not exist.", password_empty: "Enter a password.",
+    helpTitle: "How to use Quick7Zip", helpStep1: "Choose the folder or drive to compress and the output .7z file.",
+    helpStep2: "Review the automatically analyzed settings (compression level, threads, etc.).", helpStep3: "Set AES-256 encryption and split volumes if needed.",
+    helpStep4: "Press \"Start compression\" to run 7-Zip.", helpNote: "Quick7Zip does not bundle 7-Zip itself. Install 7-Zip 26.02 or newer beforehand.",
+    aboutLink: "About", aboutEnvHeading: "[Environment]", aboutEnvBody: "MinGW-w64 (g++) / Win32 API / Microsoft Edge WebView2",
+    aboutAuthorHeading: "[Author]"
   }
 };
 
@@ -217,6 +227,27 @@ $("startButton").addEventListener("click", () => {
   post({type: "start_archive", input, output, encrypt, encryptHeaders: $("encryptHeaders").checked, password: $("password").value, split: $("splitSize").value});
 });
 $("cancelButton").addEventListener("click", () => post({type: "cancel"}));
+$("helpButton").addEventListener("click", () => $("helpModal").classList.remove("hidden"));
+$("helpClose").addEventListener("click", () => $("helpModal").classList.add("hidden"));
+$("helpModal").addEventListener("click", (event) => { if (event.target === $("helpModal")) $("helpModal").classList.add("hidden"); });
+$("aboutLink").addEventListener("click", () => { $("helpModal").classList.add("hidden"); $("aboutModal").classList.remove("hidden"); });
+$("aboutClose").addEventListener("click", () => $("aboutModal").classList.add("hidden"));
+$("aboutModal").addEventListener("click", (event) => { if (event.target === $("aboutModal")) $("aboutModal").classList.add("hidden"); });
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") { $("helpModal").classList.add("hidden"); $("aboutModal").classList.add("hidden"); }
+});
+
+const appShell = document.querySelector(".app-shell");
+let lastReportedHeight = 0;
+function reportSize() {
+  const height = Math.ceil(appShell.offsetHeight);
+  if (height && Math.abs(height - lastReportedHeight) >= 1) {
+    lastReportedHeight = height;
+    post({type: "resize", height});
+  }
+}
+new ResizeObserver(reportSize).observe(appShell);
+window.addEventListener("load", reportSize);
 
 applyLanguage();
 post({type: "initialize"});

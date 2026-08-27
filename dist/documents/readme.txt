@@ -1,5 +1,5 @@
 Quick7Zip - Adaptive 7-Zip frontend for Windows
-Distribution package  v1.0.0 stable release
+Distribution package  v1.1.1 stable release
 
 GitHub
 ------

@@ -3,7 +3,7 @@
 
 Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It analyzes storage type, CPU, memory, file count, total size, and file composition before selecting practical compression options.
 
-> Stable release v1.0.0.
+> Stable release v1.1.1.
 
 ## What makes it different
 
