@@ -158,7 +158,7 @@ webview?.addEventListener("message", ({data}) => {
       $("inputPath").value = data.path; analyzedPath = ""; $("startButton").disabled = true;
       $("analysisNote").classList.add("hidden"); $("analysisNote").textContent = "";
       post({type: "analyze", path: data.path});
-      if (!$("outputPath").value) $("outputPath").value = `${data.path.replace(/[\\/]$/, "")}.7z`;
+      $("outputPath").value = `${data.path.replace(/[\\/]$/, "")}.7z`;
       break;
     case "output_selected": $("outputPath").value = data.path; updateStartState(); break;
     case "analysis_started": setBusy(true, "analyzing"); break;
