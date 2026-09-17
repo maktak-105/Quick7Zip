@@ -25,13 +25,16 @@
           <div><h3 data-i18n="sourceAndOutput">対象と出力先</h3></div>
         </div>
         <label class="field-label" for="inputPath" data-i18n="inputFolder">圧縮するフォルダ／ドライブ</label>
+        <label class="field-label" for="inputPath" data-i18n="inputFolder">圧縮するフォルダ／ドライブ／ファイル</label>
         <div class="path-row">
           <input id="inputPath" type="text" spellcheck="false" placeholder="C:\Data">
+          <input id="inputPath" type="text" spellcheck="false" placeholder="フォルダまたはファイル（右クリックまたは参照）">
           <button id="browseInput" class="secondary-button" type="button" data-i18n="browse">参照</button>
         </div>
         <label class="field-label" for="outputPath" data-i18n="outputArchive">出力アーカイブ</label>
         <div class="path-row output-row">
           <input id="outputPath" type="text" spellcheck="false" placeholder="D:\Backup\archive.7z">
+          <input id="outputPath" type="text" spellcheck="false" placeholder="出力先アーカイブ（自動設定）">
           <button id="browseOutput" class="secondary-button" type="button" data-i18n="browse">参照</button>
         </div>
       </section>

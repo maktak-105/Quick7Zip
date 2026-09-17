@@ -75,6 +75,73 @@ std::wstring LoadBundledHtml(HINSTANCE instance) {
 std::wstring g_initialPath;
 bool g_openSettings = false;
 
+std::wstring NormalizePath(std::wstring path) {
+    while (!path.empty() && (path.front() == L' ' || path.front() == L'\t' || path.front() == L'\"')) {
+        path.erase(path.begin());
+    }
+    while (!path.empty() && (path.back() == L' ' || path.back() == L'\t' || path.back() == L'\r' || path.back() == L'\n' || path.back() == L'\"')) {
+        path.pop_back();
+    }
+    if (path.size() == 2 && iswalpha(path[0]) && path[1] == L':') {
+        path.push_back(L'\\');
+    }
+    while (path.size() > 3 && (path.back() == L'\\' || path.back() == L'/')) {
+        path.pop_back();
+    }
+    return path;
+}
+
+std::wstring ExtractPathFromCommandLine(const std::wstring& cmdLine) {
+    if (cmdLine.empty()) return {};
+    size_t pos = 0;
+    while (pos < cmdLine.size() && iswspace(cmdLine[pos])) ++pos;
+    if (pos >= cmdLine.size()) return {};
+    if (cmdLine[pos] == L'\"') {
+        ++pos;
+        while (pos < cmdLine.size() && cmdLine[pos] != L'\"') ++pos;
+        if (pos < cmdLine.size()) ++pos;
+    } else {
+        while (pos < cmdLine.size() && !iswspace(cmdLine[pos])) ++pos;
+    }
+    while (pos < cmdLine.size() && iswspace(cmdLine[pos])) ++pos;
+    if (pos >= cmdLine.size()) return {};
+
+    std::wstring rest = cmdLine.substr(pos);
+    if (rest.rfind(L"--settings", 0) == 0 || rest.rfind(L"/settings", 0) == 0) {
+        pos += 10;
+        while (pos < cmdLine.size() && iswspace(cmdLine[pos])) ++pos;
+        if (pos >= cmdLine.size()) return {};
+        rest = cmdLine.substr(pos);
+    }
+    return NormalizePath(rest);
+}
+
+std::wstring ComputeDefaultOutputPath(const std::wstring& inputPath) {
+    if (inputPath.empty()) return {};
+    std::error_code ec;
+    fs::path p(inputPath);
+    while (p.has_filename() && p.filename().empty()) {
+        p = p.parent_path();
+    }
+    fs::path parent = p.parent_path();
+    std::wstring stem;
+    if (fs::is_regular_file(p, ec)) {
+        stem = p.stem().wstring();
+    } else {
+        stem = p.filename().wstring();
+    }
+    if (stem.empty()) {
+        std::wstring root = p.root_name().wstring();
+        if (!root.empty() && root.back() == L':') root.pop_back();
+        stem = root.empty() ? L"archive" : (L"Drive_" + root);
+        parent = p;
+    }
+    if (parent.empty()) {
+        parent = fs::current_path(ec);
+    }
+    return (parent / (stem + L".7z")).wstring();
+}
+
 std::wstring GetCurrentExecutablePath() {
     wchar_t path[MAX_PATH * 4]{};
     GetModuleFileNameW(nullptr, path, static_cast<DWORD>(std::size(path)));
@@ -96,6 +163,9 @@ void SetContextMenuEnabled(bool enable) {
         L"Software\\Classes\\Directory\\Background\\shell\\Quick7Zip",
         L"Software\\Classes\\Drive\\shell\\Quick7Zip",
         L"Software\\Classes\\*\\shell\\Quick7Zip"
+        L"Software\\Classes\\Folder\\shell\\Quick7Zip",
+        L"Software\\Classes\\*\\shell\\Quick7Zip",
+        L"Software\\Classes\\AllFilesystemObjects\\shell\\Quick7Zip"
     };
 
     if (enable) {
@@ -114,6 +184,9 @@ void SetContextMenuEnabled(bool enable) {
                 RegSetValueExW(key, L"Icon", 0, REG_SZ,
                                reinterpret_cast<const BYTE*>(iconVal.c_str()),
                                static_cast<DWORD>((iconVal.size() + 1) * sizeof(wchar_t)));
+                RegSetValueExW(key, L"MultiSelectModel", 0, REG_SZ,
+                               reinterpret_cast<const BYTE*>(L"Player"),
+                               sizeof(L"Player"));
 
                 HKEY cmdKey = nullptr;
                 if (RegCreateKeyExW(key, L"command", 0, nullptr, REG_OPTION_NON_VOLATILE,
@@ -278,12 +351,20 @@ void ResizeToContentHeight(int clientHeight) {
 }
 
 std::wstring PickFolder() {
+std::wstring PickFolder(const std::wstring& initialDir = {}) {
     IFileOpenDialog* dialog = nullptr;
     if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER,
                                 IID_PPV_ARGS(&dialog)))) return {};
     DWORD options = 0;
     dialog->GetOptions(&options);
     dialog->SetOptions(options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
+    if (!initialDir.empty()) {
+        IShellItem* folderItem = nullptr;
+        if (SUCCEEDED(SHCreateItemFromParsingName(initialDir.c_str(), nullptr, IID_PPV_ARGS(&folderItem)))) {
+            dialog->SetFolder(folderItem);
+            folderItem->Release();
+        }
+    }
     std::wstring result;
     if (SUCCEEDED(dialog->Show(g_window))) {
         IShellItem* item = nullptr;
@@ -301,6 +382,7 @@ std::wstring PickFolder() {
 }
 
 std::wstring PickArchivePath() {
+std::wstring PickArchivePath(const std::wstring& initialDir = {}, const std::wstring& defaultName = L"archive.7z") {
     IFileSaveDialog* dialog = nullptr;
     if (FAILED(CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_INPROC_SERVER,
                                 IID_PPV_ARGS(&dialog)))) return {};
@@ -308,6 +390,14 @@ std::wstring PickArchivePath() {
     dialog->SetFileTypes(2, filters);
     dialog->SetDefaultExtension(L"7z");
     dialog->SetFileName(L"archive.7z");
+    dialog->SetFileName(defaultName.empty() ? L"archive.7z" : defaultName.c_str());
+    if (!initialDir.empty()) {
+        IShellItem* folderItem = nullptr;
+        if (SUCCEEDED(SHCreateItemFromParsingName(initialDir.c_str(), nullptr, IID_PPV_ARGS(&folderItem)))) {
+            dialog->SetFolder(folderItem);
+            folderItem->Release();
+        }
+    }
     std::wstring result;
     if (SUCCEEDED(dialog->Show(g_window))) {
         IShellItem* item = nullptr;
@@ -453,6 +543,7 @@ void HandleWebMessage(const std::wstring& json) {
         EnsureInitialContextMenu();
         const auto sevenZip = FindSevenZip();
         const bool contextMenu = IsContextMenuEnabled();
+        const std::wstring defaultOutput = ComputeDefaultOutputPath(g_initialPath);
         std::wstringstream reply;
         reply << L"{\"type\":\"initialized\",\"found\":" << (sevenZip.found ? L"true" : L"false")
               << L",\"supported\":" << (IsSupportedSevenZipVersion(sevenZip.version) ? L"true" : L"false")
@@ -461,6 +552,8 @@ void HandleWebMessage(const std::wstring& json) {
               << L"\",\"contextMenu\":" << (contextMenu ? L"true" : L"false")
               << L",\"openSettings\":" << (g_openSettings ? L"true" : L"false")
               << L",\"initialPath\":\"" << JsonEscape(g_initialPath) << L"\"}";
+              << L",\"initialPath\":\"" << JsonEscape(g_initialPath) << L"\""
+              << L",\"defaultOutput\":\"" << JsonEscape(defaultOutput) << L"\"}";
         LogDebug(L"Reply to initialize: " + reply.str());
         QueueJson(reply.str());
         if (g_openSettings) {
@@ -474,9 +567,31 @@ void HandleWebMessage(const std::wstring& json) {
         QueueJson(reply.str());
     } else if (type == L"browse_input") {
         const auto path = PickFolder();
+        const std::wstring current = JsonString(json, L"current");
+        std::wstring initialDir = current.empty() ? g_initialPath : current;
+        std::error_code ec;
+        if (!initialDir.empty() && fs::is_regular_file(initialDir, ec)) {
+            initialDir = fs::path(initialDir).parent_path().wstring();
+        }
+        const auto path = PickFolder(initialDir);
         if (!path.empty()) QueueJson(L"{\"type\":\"input_selected\",\"path\":\"" + JsonEscape(path) + L"\"}");
     } else if (type == L"browse_output") {
         const auto path = PickArchivePath();
+        const std::wstring current = JsonString(json, L"current");
+        std::wstring initialDir;
+        std::wstring defaultName = L"archive.7z";
+        if (!current.empty()) {
+            fs::path p(current);
+            initialDir = p.parent_path().wstring();
+            if (p.has_filename()) {
+                defaultName = p.filename().wstring();
+            }
+        } else if (!g_initialPath.empty()) {
+            fs::path p(ComputeDefaultOutputPath(g_initialPath));
+            initialDir = p.parent_path().wstring();
+            if (p.has_filename()) defaultName = p.filename().wstring();
+        }
+        const auto path = PickArchivePath(initialDir, defaultName);
         if (!path.empty()) QueueJson(L"{\"type\":\"output_selected\",\"path\":\"" + JsonEscape(path) + L"\"}");
     } else if (type == L"analyze") {
         BeginAnalysis(JsonString(json, L"path"));
@@ -626,6 +741,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
                 rawPath.pop_back();
         for (int i = 1; i < argc; ++i) {
             if (!argv[i]) continue;
+            if (!argv[i] || argv[i][0] == L'\0') continue;
             if (_wcsicmp(argv[i], L"--settings") == 0 || _wcsicmp(argv[i], L"/settings") == 0) {
                 g_openSettings = true;
             } else if (g_initialPath.empty() && argv[i][0] != L'\0') {
@@ -637,6 +753,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
                     rawPath.pop_back();
                 }
                 g_initialPath = rawPath;
+            } else if (g_initialPath.empty()) {
+                g_initialPath = NormalizePath(argv[i]);
             }
             if (rawPath.size() > 3 && (rawPath.back() == L'\\' || rawPath.back() == L'/')) {
                 rawPath.pop_back();
@@ -644,6 +762,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
             g_initialPath = rawPath;
         }
         LocalFree(argv);
+    }
+    if (g_initialPath.empty()) {
+        g_initialPath = ExtractPathFromCommandLine(GetCommandLineW());
     }
     LogDebug(L"g_initialPath: " + g_initialPath);
     EnsureInitialContextMenu();

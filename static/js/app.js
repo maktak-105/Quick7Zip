@@ -150,6 +150,18 @@ function updateAnalysis(data) {
   updateStartState();
 }
 
+function computeDefaultOutput(inputPath) {
+  if (!inputPath) return "";
+  const clean = inputPath.trim().replace(/[\\/]+$/, "");
+  const slashIdx = Math.max(clean.lastIndexOf("\\"), clean.lastIndexOf("/"));
+  const parentDir = slashIdx >= 0 ? clean.substring(0, slashIdx) : "";
+  const name = slashIdx >= 0 ? clean.substring(slashIdx + 1) : clean;
+  const dotIdx = name.lastIndexOf(".");
+  const stem = (dotIdx > 0) ? name.substring(0, dotIdx) : name;
+  const sep = clean.includes("/") ? "/" : "\\";
+  return parentDir ? `${parentDir}${sep}${stem}.7z` : `${stem}.7z`;
+}
+
 webview?.addEventListener("message", ({data}) => {
   switch (data.type) {
     case "initialized":
@@ -168,6 +180,7 @@ webview?.addEventListener("message", ({data}) => {
         $("analysisNote").textContent = "";
         post({type: "analyze", path: data.initialPath});
         $("outputPath").value = `${data.initialPath.replace(/[\\/]$/, "")}.7z`;
+        $("outputPath").value = data.defaultOutput || computeDefaultOutput(data.initialPath);
       }
       updateStartState();
       break;
@@ -180,8 +193,14 @@ webview?.addEventListener("message", ({data}) => {
     case "input_selected":
       $("inputPath").value = data.path; analyzedPath = ""; $("startButton").disabled = true;
       $("analysisNote").classList.add("hidden"); $("analysisNote").textContent = "";
+      $("inputPath").value = data.path;
+      analyzedPath = "";
+      $("startButton").disabled = true;
+      $("analysisNote").classList.add("hidden");
+      $("analysisNote").textContent = "";
       post({type: "analyze", path: data.path});
       $("outputPath").value = `${data.path.replace(/[\\/]$/, "")}.7z`;
+      $("outputPath").value = computeDefaultOutput(data.path);
       break;
     case "output_selected": $("outputPath").value = data.path; updateStartState(); break;
     case "analysis_started": setBusy(true, "analyzing"); break;
@@ -218,6 +237,8 @@ $("languageButton").addEventListener("click", () => {
 });
 $("browseInput").addEventListener("click", () => post({type: "browse_input"}));
 $("browseOutput").addEventListener("click", () => post({type: "browse_output"}));
+$("browseInput").addEventListener("click", () => post({type: "browse_input", current: $("inputPath").value.trim()}));
+$("browseOutput").addEventListener("click", () => post({type: "browse_output", current: $("outputPath").value.trim() || $("inputPath").value.trim()}));
 $("inputPath").addEventListener("input", () => { if ($("inputPath").value !== analyzedPath) analyzedPath = ""; updateStartState(); });
 $("outputPath").addEventListener("input", updateStartState);
 function requestAnalysis() {
@@ -266,6 +287,11 @@ $("aboutModal").addEventListener("click", (event) => { if (event.target === $("a
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") { $("helpModal").classList.add("hidden"); $("aboutModal").classList.add("hidden"); }
   if (event.key === "Escape") { $("settingsModal").classList.add("hidden"); $("helpModal").classList.add("hidden"); $("aboutModal").classList.add("hidden"); }
+  if (event.key === "Escape") {
+    $("settingsModal").classList.add("hidden");
+    $("helpModal").classList.add("hidden");
+    $("aboutModal").classList.add("hidden");
+  }
 });
 
 const appShell = document.querySelector(".app-shell");
