@@ -4,9 +4,11 @@
 Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It analyzes storage type, CPU, memory, file count, total size, and file composition before selecting practical compression options.
 
 > Stable release v1.1.1.
+> Stable release v1.1.2.
 
 ## What makes it different
 
+- Integrates into Windows Explorer context menu (configurable in Settings, enabled by default).
 - Detects the installed `7z.exe`; 7-Zip is not bundled.
 - Selects compression level, thread count, solid mode, and type sorting from the actual workload.
 - Uses 7-Zip's own defaults for dictionary size, word size, and solid block size; these parameters are not benchmark-tuned by Quick7Zip.

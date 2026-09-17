@@ -7,6 +7,12 @@
 - Second digit: bug fixes
 - Third digit: documentation and other changes
 
+## 1.1.2 (2026-09-17)
+
+- Add Explorer context menu integration (compress selected folder, file, or drive directly from right-click).
+- Add a Settings button (gear icon) in the header to toggle context menu integration, enabled by default.
+- Automatically load and analyze command-line target paths on launch.
+
 ## 1.1.1 (2026-08-27)
 
 - Add a help button in the header (usage guide and version display), and move the 7-Zip version badge to the footer center.

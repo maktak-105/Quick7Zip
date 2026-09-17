@@ -13,6 +13,7 @@
         <button id="cancelButton" class="danger-button hidden" type="button" data-i18n="cancel">中止</button>
       </div>
       <div class="header-actions">
+        <button id="settingsButton" class="icon-button" type="button" aria-label="設定" title="設定">⚙</button>
         <button id="helpButton" class="icon-button" type="button" aria-label="ヘルプ">?</button>
         <button id="languageButton" class="ghost-button" type="button">English</button>
       </div>
@@ -100,10 +101,29 @@
     </main>
 
     <footer>
-      <span>Quick7Zip v1.1.1</span>
+      <span>Quick7Zip v1.1.2</span>
       <span id="engineBadge" class="badge pending">7-Zipを確認中</span>
       <span data-i18n="independent">7-Zipとは独立したアプリケーションです</span>
     </footer>
+  </div>
+
+  <div id="settingsModal" class="modal-overlay hidden">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h2 data-i18n="settingsTitle">設定</h2>
+        <button id="settingsClose" class="icon-button" type="button" aria-label="閉じる">×</button>
+      </div>
+      <div class="settings-body" style="margin: 12px 0 16px;">
+        <label class="switch-line">
+          <span>
+            <strong data-i18n="contextMenu">右クリックメニューに追加</strong>
+            <small data-i18n="contextMenuHelp">エクスプローラーの右クリックからQuick7Zipで圧縮できるようにします</small>
+          </span>
+          <input id="contextMenuToggle" type="checkbox" checked><i></i>
+        </label>
+      </div>
+      <button id="settingsOk" class="secondary-button" style="display:block;width:100%;" type="button">OK</button>
+    </div>
   </div>
 
   <div id="helpModal" class="modal-overlay hidden">
@@ -126,7 +146,7 @@
   <div id="aboutModal" class="modal-overlay hidden">
     <div class="modal-panel about-panel">
       <h2 class="about-name">Quick7Zip</h2>
-      <p class="about-version">Ver. 1.1.1</p>
+      <p class="about-version">Ver. 1.1.2</p>
       <hr class="about-divider">
       <p class="about-heading" data-i18n="aboutEnvHeading">[開発環境]</p>
       <p class="about-body" data-i18n="aboutEnvBody">MinGW-w64 (g++) / Win32 API / Microsoft Edge WebView2</p>

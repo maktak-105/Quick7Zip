@@ -12,7 +12,7 @@ using namespace quick7zip;
 namespace {
 
 void PrintHelp() {
-    std::wcout << LR"(Quick7Zip CLI v1.1.1
+    std::wcout << LR"(Quick7Zip CLI v1.1.2
 
 Usage:
   Quick7Zip_cli.exe --analyze <folder>

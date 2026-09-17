@@ -7,6 +7,7 @@
 #define WINVER 0x0A00
 #endif
 #include <windows.h>
+#include <shellapi.h>
 #include <shlobj.h>
 #include <shobjidl.h>
 #include <shlwapi.h>
@@ -23,11 +24,27 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <fstream>
 
 using namespace quick7zip;
 namespace fs = std::filesystem;
 
 namespace {
+
+void LogDebug(const std::wstring& text) {
+    PWSTR localAppData = nullptr;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &localAppData))) {
+        fs::path dir = fs::path(localAppData) / L"Quick7Zip";
+        std::error_code ec;
+        fs::create_directories(dir, ec);
+        fs::path logFile = dir / L"launch.log";
+        std::wofstream out(logFile, std::ios::app);
+        if (out.is_open()) {
+            out << text << L"\n";
+        }
+        CoTaskMemFree(localAppData);
+    }
+}
 
 constexpr UINT WM_Q7Z_JSON = WM_APP + 41;
 constexpr int kBaseWindowWidth = 620;
@@ -51,10 +68,112 @@ std::wstring LoadBundledHtml(HINSTANCE instance) {
     if (!bytes || !size) return {};
     const int chars = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, bytes, static_cast<int>(size), nullptr, 0);
     if (!chars) return {};
-    std::wstring html(static_cast<size_t>(chars), L'\\0');
+    std::wstring html(static_cast<size_t>(chars), L'\0');
     MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, bytes, static_cast<int>(size), html.data(), chars);
     return html;
 }
+std::wstring g_initialPath;
+bool g_openSettings = false;
+
+std::wstring GetCurrentExecutablePath() {
+    wchar_t path[MAX_PATH * 4]{};
+    GetModuleFileNameW(nullptr, path, static_cast<DWORD>(std::size(path)));
+    return std::wstring(path);
+}
+
+bool IsContextMenuEnabled() {
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Classes\\Directory\\shell\\Quick7Zip", 0, KEY_READ, &key) == ERROR_SUCCESS) {
+        RegCloseKey(key);
+        return true;
+    }
+    return false;
+}
+
+void SetContextMenuEnabled(bool enable) {
+    const wchar_t* shellKeys[] = {
+        L"Software\\Classes\\Directory\\shell\\Quick7Zip",
+        L"Software\\Classes\\Directory\\Background\\shell\\Quick7Zip",
+        L"Software\\Classes\\Drive\\shell\\Quick7Zip",
+        L"Software\\Classes\\*\\shell\\Quick7Zip"
+    };
+
+    if (enable) {
+        const std::wstring exePath = GetCurrentExecutablePath();
+        if (exePath.empty()) return;
+        const std::wstring iconVal = L"\"" + exePath + L"\",0";
+        const std::wstring menuTitle = L"Quick7Zip で圧縮";
+
+        for (const auto* subKeyPath : shellKeys) {
+            HKEY key = nullptr;
+            if (RegCreateKeyExW(HKEY_CURRENT_USER, subKeyPath, 0, nullptr, REG_OPTION_NON_VOLATILE,
+                               KEY_SET_VALUE | KEY_CREATE_SUB_KEY, nullptr, &key, nullptr) == ERROR_SUCCESS) {
+                RegSetValueExW(key, nullptr, 0, REG_SZ,
+                               reinterpret_cast<const BYTE*>(menuTitle.c_str()),
+                               static_cast<DWORD>((menuTitle.size() + 1) * sizeof(wchar_t)));
+                RegSetValueExW(key, L"Icon", 0, REG_SZ,
+                               reinterpret_cast<const BYTE*>(iconVal.c_str()),
+                               static_cast<DWORD>((iconVal.size() + 1) * sizeof(wchar_t)));
+
+                HKEY cmdKey = nullptr;
+                if (RegCreateKeyExW(key, L"command", 0, nullptr, REG_OPTION_NON_VOLATILE,
+                                   KEY_SET_VALUE, nullptr, &cmdKey, nullptr) == ERROR_SUCCESS) {
+                    const bool isBg = (wcsstr(subKeyPath, L"Background") != nullptr);
+                    const std::wstring cmd = L"\"" + exePath + (isBg ? L"\" \"%V\"" : L"\" \"%1\"");
+                    RegSetValueExW(cmdKey, nullptr, 0, REG_SZ,
+                                   reinterpret_cast<const BYTE*>(cmd.c_str()),
+                                   static_cast<DWORD>((cmd.size() + 1) * sizeof(wchar_t)));
+                    RegCloseKey(cmdKey);
+                }
+                RegCloseKey(key);
+            }
+        }
+    } else {
+        for (const auto* subKeyPath : shellKeys) {
+            RegDeleteTreeW(HKEY_CURRENT_USER, subKeyPath);
+        }
+    }
+
+    HKEY appKey = nullptr;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, L"Software\\Quick7Zip", 0, nullptr, REG_OPTION_NON_VOLATILE,
+                       KEY_SET_VALUE, nullptr, &appKey, nullptr) == ERROR_SUCCESS) {
+        const DWORD configured = 1;
+        const DWORD enabledVal = enable ? 1 : 0;
+        RegSetValueExW(appKey, L"ContextMenuConfigured", 0, REG_DWORD,
+                       reinterpret_cast<const BYTE*>(&configured), sizeof(configured));
+        RegSetValueExW(appKey, L"ContextMenuEnabled", 0, REG_DWORD,
+                       reinterpret_cast<const BYTE*>(&enabledVal), sizeof(enabledVal));
+        RegCloseKey(appKey);
+    }
+}
+
+void EnsureInitialContextMenu() {
+    HKEY appKey = nullptr;
+    bool alreadyConfigured = false;
+    bool isEnabled = true;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Quick7Zip", 0, KEY_READ, &appKey) == ERROR_SUCCESS) {
+        DWORD configured = 0;
+        DWORD size = sizeof(configured);
+        DWORD type = REG_DWORD;
+        if (RegQueryValueExW(appKey, L"ContextMenuConfigured", nullptr, &type,
+                             reinterpret_cast<BYTE*>(&configured), &size) == ERROR_SUCCESS) {
+            alreadyConfigured = (configured != 0);
+        }
+        DWORD enabledVal = 1;
+        size = sizeof(enabledVal);
+        if (RegQueryValueExW(appKey, L"ContextMenuEnabled", nullptr, &type,
+                             reinterpret_cast<BYTE*>(&enabledVal), &size) == ERROR_SUCCESS) {
+            isEnabled = (enabledVal != 0);
+        }
+        RegCloseKey(appKey);
+    }
+    if (!alreadyConfigured) {
+        SetContextMenuEnabled(true);
+    } else if (isEnabled) {
+        SetContextMenuEnabled(true);
+    }
+}
+
 OptimizationPlan g_plan;
 
 std::wstring JsonEscape(const std::wstring& value) {
@@ -328,14 +447,30 @@ void BeginArchive(const std::wstring& json) {
 }
 
 void HandleWebMessage(const std::wstring& json) {
+    LogDebug(L"HandleWebMessage: " + json);
     const std::wstring type = JsonString(json, L"type");
     if (type == L"initialize") {
+        EnsureInitialContextMenu();
         const auto sevenZip = FindSevenZip();
+        const bool contextMenu = IsContextMenuEnabled();
         std::wstringstream reply;
         reply << L"{\"type\":\"initialized\",\"found\":" << (sevenZip.found ? L"true" : L"false")
               << L",\"supported\":" << (IsSupportedSevenZipVersion(sevenZip.version) ? L"true" : L"false")
               << L",\"path\":\"" << JsonEscape(sevenZip.executable)
-              << L"\",\"version\":\"" << JsonEscape(sevenZip.version) << L"\"}";
+              << L"\",\"version\":\"" << JsonEscape(sevenZip.version)
+              << L"\",\"contextMenu\":" << (contextMenu ? L"true" : L"false")
+              << L",\"openSettings\":" << (g_openSettings ? L"true" : L"false")
+              << L",\"initialPath\":\"" << JsonEscape(g_initialPath) << L"\"}";
+        LogDebug(L"Reply to initialize: " + reply.str());
+        QueueJson(reply.str());
+        if (g_openSettings) {
+            QueueJson(L"{\"type\":\"open_settings_modal\"}");
+        }
+    } else if (type == L"set_context_menu") {
+        const bool enabled = JsonBool(json, L"enabled", true);
+        SetContextMenuEnabled(enabled);
+        std::wstringstream reply;
+        reply << L"{\"type\":\"context_menu_updated\",\"enabled\":" << (IsContextMenuEnabled() ? L"true" : L"false") << L"}";
         QueueJson(reply.str());
     } else if (type == L"browse_input") {
         const auto path = PickFolder();
@@ -389,14 +524,18 @@ public:
     ULONG STDMETHODCALLTYPE AddRef() override { return ++refs_; }
     ULONG STDMETHODCALLTYPE Release() override { const ULONG value = --refs_; if (!value) delete this; return value; }
     HRESULT STDMETHODCALLTYPE Invoke(HRESULT result, ICoreWebView2Controller* controller) override {
-        if (FAILED(result) || !controller) return result;
+        LogDebug(L"ControllerHandler Invoke entered with result: " + std::to_wstring(result));
+        if (FAILED(result) || !controller) {
+            LogDebug(L"ControllerHandler failed with result: " + std::to_wstring(result));
+            return result;
+        }
         g_controller = controller; g_controller->AddRef();
         controller->get_CoreWebView2(&g_webview);
         RECT bounds{}; GetClientRect(g_window, &bounds); controller->put_Bounds(bounds);
         ICoreWebView2Settings* settings = nullptr;
         if (SUCCEEDED(g_webview->get_Settings(&settings)) && settings) {
             settings->put_AreDefaultContextMenusEnabled(FALSE);
-            settings->put_AreDevToolsEnabled(FALSE);
+            settings->put_AreDevToolsEnabled(TRUE);
             settings->put_IsStatusBarEnabled(FALSE);
             settings->Release();
         }
@@ -422,8 +561,11 @@ public:
     ULONG STDMETHODCALLTYPE AddRef() override { return ++refs_; }
     ULONG STDMETHODCALLTYPE Release() override { const ULONG value = --refs_; if (!value) delete this; return value; }
     HRESULT STDMETHODCALLTYPE Invoke(HRESULT result, ICoreWebView2Environment* environment) override {
+        LogDebug(L"EnvironmentHandler Invoke called with result: " + std::to_wstring(result));
         if (FAILED(result) || !environment) return result;
-        return environment->CreateCoreWebView2Controller(g_window, new ControllerHandler());
+        HRESULT hr = environment->CreateCoreWebView2Controller(g_window, new ControllerHandler());
+        LogDebug(L"CreateCoreWebView2Controller returned hr: " + std::to_wstring(hr));
+        return hr;
     }
 };
 
@@ -469,8 +611,42 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
 } // namespace
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
+    LogDebug(L"--- wWinMain Started ---");
+    LogDebug(L"CommandLine: " + std::wstring(GetCommandLineW()));
     SetProcessDPIAware();
     if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED))) return 1;
+
+    int argc = 0;
+    LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if (argv) {
+        if (argc > 1 && argv[1] && argv[1][0] != L'\0') {
+            g_initialPath = argv[1];
+            std::wstring rawPath = argv[1];
+            while (!rawPath.empty() && (rawPath.back() == L'\"' || rawPath.back() == L' ' || rawPath.back() == L'\t')) {
+                rawPath.pop_back();
+        for (int i = 1; i < argc; ++i) {
+            if (!argv[i]) continue;
+            if (_wcsicmp(argv[i], L"--settings") == 0 || _wcsicmp(argv[i], L"/settings") == 0) {
+                g_openSettings = true;
+            } else if (g_initialPath.empty() && argv[i][0] != L'\0') {
+                std::wstring rawPath = argv[i];
+                while (!rawPath.empty() && (rawPath.back() == L'\"' || rawPath.back() == L' ' || rawPath.back() == L'\t')) {
+                    rawPath.pop_back();
+                }
+                if (rawPath.size() > 3 && (rawPath.back() == L'\\' || rawPath.back() == L'/')) {
+                    rawPath.pop_back();
+                }
+                g_initialPath = rawPath;
+            }
+            if (rawPath.size() > 3 && (rawPath.back() == L'\\' || rawPath.back() == L'/')) {
+                rawPath.pop_back();
+            }
+            g_initialPath = rawPath;
+        }
+        LocalFree(argv);
+    }
+    LogDebug(L"g_initialPath: " + g_initialPath);
+    EnsureInitialContextMenu();
     SetCurrentProcessExplicitAppUserModelID(L"maktak-105.Quick7Zip");
     const wchar_t className[] = L"Quick7ZipWindow";
     WNDCLASSEXW wc{};
@@ -489,6 +665,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
                                CW_USEDEFAULT, CW_USEDEFAULT, kBaseWindowWidth, kBaseWindowHeight,
                                nullptr, nullptr, instance, nullptr);
     if (!g_window) { CoUninitialize(); return 2; }
+    if (!g_window) {
+        LogDebug(L"CreateWindowExW failed");
+        CoUninitialize();
+        return 2;
+    }
     const UINT windowDpi = GetDpiForWindow(g_window);
     if (windowDpi != USER_DEFAULT_SCREEN_DPI) {
         SetWindowPos(g_window, nullptr, 0, 0,
@@ -506,6 +687,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     }()).parent_path() / L"WebView2Loader.dll";
     HMODULE loader = LoadLibraryW(loaderPath.c_str());
     if (!loader) {
+        LogDebug(L"WebView2Loader.dll not found at: " + loaderPath.wstring());
         MessageBoxW(g_window, L"WebView2Loader.dll was not found.", L"Quick7Zip", MB_ICONERROR);
         DestroyWindow(g_window);
     } else {
@@ -521,8 +703,11 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
             fs::create_directories(userDataFolder, directoryError);
         }
         if (!create || FAILED(create(nullptr, userDataFolder.empty() ? nullptr : userDataFolder.c_str(), nullptr, new EnvironmentHandler()))) {
+            LogDebug(L"CreateCoreWebView2EnvironmentWithOptions failed");
             MessageBoxW(g_window, L"Microsoft Edge WebView2 Runtime could not be initialized.", L"Quick7Zip", MB_ICONERROR);
             DestroyWindow(g_window);
+        } else {
+            LogDebug(L"CreateCoreWebView2EnvironmentWithOptions called successfully");
         }
     }
 

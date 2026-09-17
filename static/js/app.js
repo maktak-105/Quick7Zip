@@ -22,7 +22,9 @@ const i18n = {
     helpStep2: "自動分析された設定(圧縮レベル・スレッド数など)を確認します。", helpStep3: "必要に応じてAES-256暗号化・分割ボリュームを設定します。",
     helpStep4: "「圧縮を開始」を押すと7-Zipが実行されます。", helpNote: "Quick7Zipは7-Zip本体を同梱しません。あらかじめ7-Zip 26.02以降をインストールしてください。",
     aboutLink: "バージョン情報", aboutEnvHeading: "[開発環境]", aboutEnvBody: "MinGW-w64 (g++) / Win32 API / Microsoft Edge WebView2",
-    aboutAuthorHeading: "[制作者]"
+    aboutAuthorHeading: "[制作者]",
+    settingsTitle: "設定", contextMenu: "右クリックメニューに追加",
+    contextMenuHelp: "エクスプローラーの右クリックからQuick7Zipで圧縮できるようにします"
   },
   en: {
     tagline: "Automatically tunes installed 7-Zip for your data and PC", autoProfile: "AUTO PROFILE",
@@ -44,7 +46,9 @@ const i18n = {
     helpStep2: "Review the automatically analyzed settings (compression level, threads, etc.).", helpStep3: "Set AES-256 encryption and split volumes if needed.",
     helpStep4: "Press \"Start compression\" to run 7-Zip.", helpNote: "Quick7Zip does not bundle 7-Zip itself. Install 7-Zip 26.02 or newer beforehand.",
     aboutLink: "About", aboutEnvHeading: "[Environment]", aboutEnvBody: "MinGW-w64 (g++) / Win32 API / Microsoft Edge WebView2",
-    aboutAuthorHeading: "[Author]"
+    aboutAuthorHeading: "[Author]",
+    settingsTitle: "Settings", contextMenu: "Add to context menu",
+    contextMenuHelp: "Enables Quick7Zip compression from Windows Explorer right-click menu"
   }
 };
 
@@ -152,7 +156,26 @@ webview?.addEventListener("message", ({data}) => {
       engineFound = data.found && data.supported;
       $("engineBadge").textContent = !data.found ? t("engineMissing") : (data.supported ? `7-Zip ${data.version}` : t("engineOld"));
       $("engineBadge").className = `badge ${engineFound ? "ok" : "error"}`;
+      $("contextMenuToggle").checked = !!data.contextMenu;
+      if (data.openSettings) {
+        $("settingsModal").classList.remove("hidden");
+      }
+      if (data.initialPath) {
+        $("inputPath").value = data.initialPath;
+        analyzedPath = "";
+        $("startButton").disabled = true;
+        $("analysisNote").classList.add("hidden");
+        $("analysisNote").textContent = "";
+        post({type: "analyze", path: data.initialPath});
+        $("outputPath").value = `${data.initialPath.replace(/[\\/]$/, "")}.7z`;
+      }
       updateStartState();
+      break;
+    case "context_menu_updated":
+      $("contextMenuToggle").checked = !!data.enabled;
+      break;
+    case "open_settings_modal":
+      $("settingsModal").classList.remove("hidden");
       break;
     case "input_selected":
       $("inputPath").value = data.path; analyzedPath = ""; $("startButton").disabled = true;
@@ -230,11 +253,19 @@ $("cancelButton").addEventListener("click", () => post({type: "cancel"}));
 $("helpButton").addEventListener("click", () => $("helpModal").classList.remove("hidden"));
 $("helpClose").addEventListener("click", () => $("helpModal").classList.add("hidden"));
 $("helpModal").addEventListener("click", (event) => { if (event.target === $("helpModal")) $("helpModal").classList.add("hidden"); });
+$("settingsButton").addEventListener("click", () => $("settingsModal").classList.remove("hidden"));
+$("settingsClose").addEventListener("click", () => $("settingsModal").classList.add("hidden"));
+$("settingsOk").addEventListener("click", () => $("settingsModal").classList.add("hidden"));
+$("settingsModal").addEventListener("click", (event) => { if (event.target === $("settingsModal")) $("settingsModal").classList.add("hidden"); });
+$("contextMenuToggle").addEventListener("change", () => {
+  post({type: "set_context_menu", enabled: $("contextMenuToggle").checked});
+});
 $("aboutLink").addEventListener("click", () => { $("helpModal").classList.add("hidden"); $("aboutModal").classList.remove("hidden"); });
 $("aboutClose").addEventListener("click", () => $("aboutModal").classList.add("hidden"));
 $("aboutModal").addEventListener("click", (event) => { if (event.target === $("aboutModal")) $("aboutModal").classList.add("hidden"); });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") { $("helpModal").classList.add("hidden"); $("aboutModal").classList.add("hidden"); }
+  if (event.key === "Escape") { $("settingsModal").classList.add("hidden"); $("helpModal").classList.add("hidden"); $("aboutModal").classList.add("hidden"); }
 });
 
 const appShell = document.querySelector(".app-shell");
