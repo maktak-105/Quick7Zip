@@ -7,6 +7,16 @@
 - Second digit: bug fixes
 - Third digit: documentation and other changes
 
+## 2.0.0 (2026-09-18)
+
+- Added support for batch 7z compression of multiple files and folders.
+- Enhanced Explorer context menu handling to aggregate multi-selected items into a single application instance for batch archiving (via Mutex and WM_COPYDATA).
+- Improved UI display of selected multiple files to be comma-separated with horizontal scrolling support.
+- Fixed an issue where the first file was duplicated in the archive request causing 7-Zip to terminate with an error.
+- Set the default browse directory to the user's profile home folder when no path is selected.
+- Fixed an issue where the browse dialog reopened upon cancellation due to duplicate event listeners.
+- Fixed a registry key formatting bug when configuring Explorer context menu integration.
+
 ## 1.1.2 (2026-09-17)
 
 - Add Explorer context menu integration (compress selected folder, file, or drive directly from right-click).
