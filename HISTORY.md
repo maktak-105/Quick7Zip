@@ -7,6 +7,13 @@
 - Second digit: bug fixes
 - Third digit: documentation and other changes
 
+## 2.1.0 (2026-09-18)
+
+- Modernized the input Browse dialog using the native Windows Explorer style (`IFileOpenDialog`).
+- Enabled direct selection of both files and folders visible within the browse dialog.
+- Supported multi-item selection with CTRL+click, SHIFT+click, and mouse drag rectangle in the browse dialog.
+- Fixed a bug where the Start Compression button remained disabled when a single file was selected or entered manually.
+
 ## 2.0.0 (2026-09-18)
 
 - Added support for batch 7z compression of multiple files and folders.

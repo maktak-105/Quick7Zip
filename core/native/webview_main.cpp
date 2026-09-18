@@ -173,6 +173,8 @@ std::wstring ComputeDefaultOutputPathForPaths(const std::vector<std::wstring>& i
 }
 
 std::wstring ComputeDisplayNames(const std::vector<std::wstring>& inputPaths) {
+    if (inputPaths.empty()) return {};
+    if (inputPaths.size() == 1) return inputPaths[0];
     std::wstringstream ss;
     for (size_t i = 0; i < inputPaths.size(); ++i) {
         if (i > 0) ss << L", ";
@@ -442,13 +444,72 @@ std::wstring GetUserHomeFolder() {
     return result;
 }
 
-std::wstring PickFolder(const std::wstring& initialDir = {}) {
+class FileOrFolderDialogEvents : public IFileDialogEvents {
+    LONG m_ref = 1;
+public:
+    std::wstring lastSelectedPath;
+
+    IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv) override {
+        if (riid == IID_IUnknown || riid == IID_IFileDialogEvents) {
+            *ppv = static_cast<IFileDialogEvents*>(this);
+            AddRef();
+            return S_OK;
+        }
+        *ppv = nullptr;
+        return E_NOINTERFACE;
+    }
+    IFACEMETHODIMP_(ULONG) AddRef() override { return InterlockedIncrement(&m_ref); }
+    IFACEMETHODIMP_(ULONG) Release() override {
+        LONG c = InterlockedDecrement(&m_ref);
+        if (c == 0) delete this;
+        return c;
+    }
+
+    IFACEMETHODIMP OnSelectionChange(IFileDialog* pfd) override {
+        IShellItem* psi = nullptr;
+        if (SUCCEEDED(pfd->GetCurrentSelection(&psi)) && psi) {
+            PWSTR pszPath = nullptr;
+            if (SUCCEEDED(psi->GetDisplayName(SIGDN_FILESYSPATH, &pszPath)) && pszPath) {
+                lastSelectedPath = pszPath;
+                CoTaskMemFree(pszPath);
+            }
+            psi->Release();
+        }
+        return S_OK;
+    }
+
+    IFACEMETHODIMP OnFileOk(IFileDialog*) override { return S_OK; }
+    IFACEMETHODIMP OnFolderChanging(IFileDialog*, IShellItem*) override { return S_OK; }
+    IFACEMETHODIMP OnFolderChange(IFileDialog*) override {
+        lastSelectedPath.clear();
+        return S_OK;
+    }
+    IFACEMETHODIMP OnShareViolation(IFileDialog*, IShellItem*, FDE_SHAREVIOLATION_RESPONSE* pResponse) override {
+        *pResponse = FDESVR_DEFAULT;
+        return S_OK;
+    }
+    IFACEMETHODIMP OnTypeChange(IFileDialog*) override { return S_OK; }
+    IFACEMETHODIMP OnOverwrite(IFileDialog*, IShellItem*, FDE_OVERWRITE_RESPONSE* pResponse) override {
+        *pResponse = FDEOR_DEFAULT;
+        return S_OK;
+    }
+};
+
+std::vector<std::wstring> PickFileOrFolder(const std::wstring& initialDir = {}) {
     IFileOpenDialog* dialog = nullptr;
     if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER,
                                 IID_PPV_ARGS(&dialog)))) return {};
+
     DWORD options = 0;
     dialog->GetOptions(&options);
-    dialog->SetOptions(options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
+    dialog->SetOptions(options | FOS_ALLOWMULTISELECT | FOS_DONTADDTORECENT | FOS_NOVALIDATE | FOS_PATHMUSTEXIST);
+
+    FileOrFolderDialogEvents* events = new FileOrFolderDialogEvents();
+    DWORD cookie = 0;
+    dialog->Advise(events, &cookie);
+
+    dialog->SetTitle(L"圧縮するファイルまたはフォルダーを選択してください");
+    dialog->SetOkButtonLabel(L"選択");
 
     std::wstring dirToOpen = initialDir;
     std::error_code ec;
@@ -462,21 +523,38 @@ std::wstring PickFolder(const std::wstring& initialDir = {}) {
             folderItem->Release();
         }
     }
-    std::wstring result;
+
+    std::vector<std::wstring> results;
     if (SUCCEEDED(dialog->Show(g_window))) {
-        IShellItem* item = nullptr;
-        if (SUCCEEDED(dialog->GetResult(&item))) {
-            PWSTR path = nullptr;
-            if (SUCCEEDED(item->GetDisplayName(SIGDN_FILESYSPATH, &path))) {
-                result = path;
-                CoTaskMemFree(path);
+        IShellItemArray* items = nullptr;
+        if (SUCCEEDED(dialog->GetResults(&items)) && items) {
+            DWORD count = 0;
+            items->GetCount(&count);
+            for (DWORD i = 0; i < count; ++i) {
+                IShellItem* item = nullptr;
+                if (SUCCEEDED(items->GetItemAt(i, &item)) && item) {
+                    PWSTR path = nullptr;
+                    if (SUCCEEDED(item->GetDisplayName(SIGDN_FILESYSPATH, &path)) && path) {
+                        results.emplace_back(path);
+                        CoTaskMemFree(path);
+                    }
+                    item->Release();
+                }
             }
-            item->Release();
+            items->Release();
+        }
+        if (results.empty() && !events->lastSelectedPath.empty()) {
+            results.push_back(events->lastSelectedPath);
         }
     }
+
+    dialog->Unadvise(cookie);
+    events->Release();
     dialog->Release();
-    return result;
+    return results;
 }
+
+
 
 std::wstring PickArchivePath(const std::wstring& initialDir = {}, const std::wstring& defaultName = L"archive.7z") {
     IFileSaveDialog* dialog = nullptr;
@@ -579,7 +657,7 @@ void BeginAnalysis(const std::vector<std::wstring>& paths) {
                 std::lock_guard<std::mutex> lock(g_profileMutex);
                 g_analyzedPaths = paths; g_system = system; g_files = files; g_plan = plan;
             }
-            std::wstring displayPath = paths.size() == 1 ? paths[0] : ComputeDisplayNames(paths);
+            std::wstring displayPath = ComputeDisplayNames(paths);
             QueueJson(ProfileJson(displayPath, system, files, plan));
         } else {
             QueueJson(g_cancel.load() ? L"{\"type\":\"cancelled\"}" :
@@ -682,7 +760,7 @@ void HandleWebMessage(const std::wstring& json) {
         std::wstringstream reply;
         reply << L"{\"type\":\"context_menu_updated\",\"enabled\":" << (IsContextMenuEnabled() ? L"true" : L"false") << L"}";
         QueueJson(reply.str());
-    } else if (type == L"browse_input") {
+    } else if (type == L"browse_input" || type == L"browse_files" || type == L"browse_folder") {
         const std::wstring current = JsonString(json, L"current");
         std::wstring initialDir = current;
         if (initialDir.empty() && !g_initialPaths.empty()) initialDir = g_initialPaths[0];
@@ -690,14 +768,23 @@ void HandleWebMessage(const std::wstring& json) {
         if (!initialDir.empty() && fs::is_regular_file(initialDir, ec)) {
             initialDir = fs::path(initialDir).parent_path().wstring();
         }
-        const auto path = PickFolder(initialDir);
-        if (!path.empty()) {
-            g_initialPaths = {path};
-            const std::wstring defOut = ComputeDefaultOutputPath(path);
-            QueueJson(L"{\"type\":\"input_selected\",\"path\":\"" + JsonEscape(path) +
-                      L"\",\"displayNames\":\"" + JsonEscape(path) +
-                      L"\",\"defaultOutput\":\"" + JsonEscape(defOut) + L"\"}");
+        const auto paths = PickFileOrFolder(initialDir);
+        if (!paths.empty()) {
+            g_initialPaths = paths;
+            const std::wstring defOut = ComputeDefaultOutputPathForPaths(paths);
+            const std::wstring displayNames = ComputeDisplayNames(paths);
+            std::wstringstream msg;
+            msg << L"{\"type\":\"paths_updated\",\"paths\":[";
+            for (size_t i = 0; i < paths.size(); ++i) {
+                if (i > 0) msg << L",";
+                msg << L"\"" << JsonEscape(paths[i]) << L"\"";
+            }
+            msg << L"],\"displayNames\":\"" << JsonEscape(displayNames)
+                << L"\",\"defaultOutput\":\"" << JsonEscape(defOut) << L"\"}";
+            QueueJson(msg.str());
+            BeginAnalysis(paths);
         }
+
     } else if (type == L"browse_output") {
         const std::wstring current = JsonString(json, L"current");
         std::wstring initialDir;

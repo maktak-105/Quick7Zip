@@ -107,7 +107,9 @@ function applyLanguage() {
 function updateStartState() {
   const input = $("inputPath").value.trim();
   const output = $("outputPath").value.trim();
-  $("startButton").disabled = busy || !engineFound || !analyzedPath || input !== analyzedPath || !output;
+  const inputMatches = (input === analyzedPath) ||
+    (currentPaths.length === 1 && (input === currentPaths[0] || (analyzedPath && (input === analyzedPath || currentPaths[0] === analyzedPath))));
+  $("startButton").disabled = busy || !engineFound || !analyzedPath || !inputMatches || !output;
 }
 
 function setBusy(value, statusKey) {
@@ -166,11 +168,11 @@ function computeDefaultOutput(inputPath) {
 function applySelectedPaths(paths, displayNames, defaultOutput) {
   if (!paths || paths.length === 0) return;
   currentPaths = paths;
-  const disp = displayNames || paths.map(p => {
+  const disp = displayNames || (paths.length === 1 ? paths[0] : paths.map(p => {
     const clean = p.replace(/[\\/]+$/, "");
     const idx = Math.max(clean.lastIndexOf("\\"), clean.lastIndexOf("/"));
     return idx >= 0 ? clean.substring(idx + 1) : clean;
-  }).join(", ");
+  }).join(", "));
   $("inputPath").value = disp;
   $("inputPath").title = paths.join("\n");
   analyzedPath = "";
@@ -248,14 +250,18 @@ $("languageButton").addEventListener("click", () => {
   try { localStorage.setItem("quick7zip-language", language); } catch (_) { /* Optional preference storage. */ }
   applyLanguage();
 });
-$("browseInput").addEventListener("click", () => post({type: "browse_input", current: $("inputPath").value.trim()}));
+$("browseInput")?.addEventListener("click", () => post({type: "browse_input", current: $("inputPath").value.trim()}));
 $("browseOutput").addEventListener("click", () => post({type: "browse_output", current: $("outputPath").value.trim() || $("inputPath").value.trim()}));
 $("inputPath").addEventListener("input", () => { if ($("inputPath").value !== analyzedPath) analyzedPath = ""; updateStartState(); });
 $("outputPath").addEventListener("input", updateStartState);
 function requestAnalysis() {
   const path = $("inputPath").value.trim();
   if (!path || busy || path === analyzedPath) return;
-  post({type: "analyze", path});
+  currentPaths = [path];
+  $("inputPath").title = path;
+  analyzedPath = "";
+  $("startButton").disabled = true;
+  post({type: "analyze", paths: [path], path});
 }
 $("inputPath").addEventListener("change", requestAnalysis);
 $("inputPath").addEventListener("keydown", (event) => {
@@ -282,7 +288,9 @@ $("inputPath").addEventListener("wheel", (e) => {
 $("startButton").addEventListener("click", () => {
   const input = $("inputPath").value.trim(), output = $("outputPath").value.trim();
   if (!input || !output || currentPaths.length === 0) return alert(t("selectPaths"));
-  if (input !== analyzedPath) return alert(t("reanalyze"));
+  const inputMatches = (input === analyzedPath) ||
+    (currentPaths.length === 1 && (input === currentPaths[0] || (analyzedPath && (input === analyzedPath || currentPaths[0] === analyzedPath))));
+  if (!inputMatches) return alert(t("reanalyze"));
   const encrypt = $("encryptToggle").checked;
   if (encrypt && ($("password").value !== $("passwordConfirm").value || !$("password").value)) return alert(t("passwordMismatch"));
   startElapsedTimer();
