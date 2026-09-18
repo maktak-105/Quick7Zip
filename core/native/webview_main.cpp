@@ -204,7 +204,6 @@ void SetContextMenuEnabled(bool enable) {
         L"Software\\Classes\\Directory\\shell\\Quick7Zip",
         L"Software\\Classes\\Directory\\Background\\shell\\Quick7Zip",
         L"Software\\Classes\\Drive\\shell\\Quick7Zip",
-        L"Software\\Classes\\*\\shell\\Quick7Zip"
         L"Software\\Classes\\Folder\\shell\\Quick7Zip",
         L"Software\\Classes\\*\\shell\\Quick7Zip",
         L"Software\\Classes\\AllFilesystemObjects\\shell\\Quick7Zip"
@@ -433,6 +432,16 @@ void ResizeToContentHeight(int clientHeight) {
                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
+std::wstring GetUserHomeFolder() {
+    PWSTR profilePath = nullptr;
+    std::wstring result;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Profile, KF_FLAG_DEFAULT, nullptr, &profilePath))) {
+        result = profilePath;
+        CoTaskMemFree(profilePath);
+    }
+    return result;
+}
+
 std::wstring PickFolder(const std::wstring& initialDir = {}) {
     IFileOpenDialog* dialog = nullptr;
     if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER,
@@ -440,9 +449,15 @@ std::wstring PickFolder(const std::wstring& initialDir = {}) {
     DWORD options = 0;
     dialog->GetOptions(&options);
     dialog->SetOptions(options | FOS_PICKFOLDERS | FOS_FORCEFILESYSTEM);
-    if (!initialDir.empty()) {
+
+    std::wstring dirToOpen = initialDir;
+    std::error_code ec;
+    if (dirToOpen.empty() || !fs::exists(dirToOpen, ec)) {
+        dirToOpen = GetUserHomeFolder();
+    }
+    if (!dirToOpen.empty()) {
         IShellItem* folderItem = nullptr;
-        if (SUCCEEDED(SHCreateItemFromParsingName(initialDir.c_str(), nullptr, IID_PPV_ARGS(&folderItem)))) {
+        if (SUCCEEDED(SHCreateItemFromParsingName(dirToOpen.c_str(), nullptr, IID_PPV_ARGS(&folderItem)))) {
             dialog->SetFolder(folderItem);
             folderItem->Release();
         }
@@ -471,9 +486,15 @@ std::wstring PickArchivePath(const std::wstring& initialDir = {}, const std::wst
     dialog->SetFileTypes(2, filters);
     dialog->SetDefaultExtension(L"7z");
     dialog->SetFileName(defaultName.empty() ? L"archive.7z" : defaultName.c_str());
-    if (!initialDir.empty()) {
+
+    std::wstring dirToOpen = initialDir;
+    std::error_code ec;
+    if (dirToOpen.empty() || !fs::exists(dirToOpen, ec)) {
+        dirToOpen = GetUserHomeFolder();
+    }
+    if (!dirToOpen.empty()) {
         IShellItem* folderItem = nullptr;
-        if (SUCCEEDED(SHCreateItemFromParsingName(initialDir.c_str(), nullptr, IID_PPV_ARGS(&folderItem)))) {
+        if (SUCCEEDED(SHCreateItemFromParsingName(dirToOpen.c_str(), nullptr, IID_PPV_ARGS(&folderItem)))) {
             dialog->SetFolder(folderItem);
             folderItem->Release();
         }

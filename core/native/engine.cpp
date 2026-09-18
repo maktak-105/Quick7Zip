@@ -361,11 +361,10 @@ OptimizationPlan ChoosePlan(const SystemProfile& system, const FileProfile& file
 
 std::wstring ValidateArchiveRequest(const ArchiveRequest& request) {
     if (!IsFile(request.sevenZipPath)) return L"sevenzip_missing";
-    const DWORD inputAttributes = GetFileAttributesW(request.inputPath.c_str());
-    if (inputAttributes == INVALID_FILE_ATTRIBUTES) return L"input_missing";
     std::vector<std::wstring> inputs = request.inputPaths;
     if (inputs.empty() && !request.inputPath.empty()) inputs.push_back(request.inputPath);
     if (inputs.empty()) return L"input_missing";
+    if (request.outputPath.empty()) return L"output_missing";
 
     for (const auto& input : inputs) {
         const DWORD inputAttributes = GetFileAttributesW(input.c_str());
@@ -375,11 +374,6 @@ std::wstring ValidateArchiveRequest(const ArchiveRequest& request) {
         if (!(inputAttributes & FILE_ATTRIBUTE_DIRECTORY) && _wcsicmp(FullPath(input).c_str(), FullPath(request.outputPath).c_str()) == 0)
             return L"output_equals_input";
     }
-    if (request.outputPath.empty()) return L"output_missing";
-    if ((inputAttributes & FILE_ATTRIBUTE_DIRECTORY) && SameOrChildPath(request.inputPath, request.outputPath))
-        return L"output_inside_input";
-    if (!(inputAttributes & FILE_ATTRIBUTE_DIRECTORY) && _wcsicmp(FullPath(request.inputPath).c_str(), FullPath(request.outputPath).c_str()) == 0)
-        return L"output_equals_input";
     const fs::path output(request.outputPath);
     const fs::path parent = output.parent_path();
     std::error_code ec;
@@ -717,7 +711,6 @@ int RunSevenZipProcess(const ArchiveRequest& request, const std::vector<std::wst
 int RunArchive(const ArchiveRequest& request, std::atomic_bool& cancel, const ProgressCallback& output) {
     if (!ValidateArchiveRequest(request).empty()) return -3;
     HybridFileLists lists;
-    if (!CollectHybridFileLists(request.inputPath, lists, cancel)) return cancel.load() ? ERROR_CANCELLED : -4;
     std::vector<std::wstring> inputs = request.inputPaths;
     if (inputs.empty() && !request.inputPath.empty()) inputs.push_back(request.inputPath);
     if (!CollectHybridFileLists(inputs, lists, cancel)) return cancel.load() ? ERROR_CANCELLED : -4;

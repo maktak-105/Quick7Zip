@@ -5,7 +5,7 @@ const i18n = {
   ja: {
     tagline: "環境とデータに合わせて、7-Zipを自動最適化", autoProfile: "AUTO PROFILE",
     headline: "迷わず、速く、安全に圧縮。", intro: "CPU・メモリ・ストレージ・ファイル構成を分析し、インストール済みの7-Zipへ最適な設定を渡します。",
-    mode: "選択モード", waitingAnalysis: "分析待ち", sourceAndOutput: "対象と出力先", inputFolder: "圧縮するフォルダ／ドライブ",
+    mode: "選択モード", waitingAnalysis: "分析待ち", sourceAndOutput: "対象と出力先", inputFolder: "圧縮するフォルダ／ファイル",
     outputArchive: "出力アーカイブ", browse: "参照", detectedProfile: "検出プロファイル", storage: "ストレージ",
     logicalProcessors: "論理プロセッサ", memory: "メモリ", files: "ファイル",
     autoSettings: "自動設定", compressionLevel: "圧縮レベル", threads: "スレッド", solid: "ソリッド圧縮", sortType: "種類順ソート",
@@ -29,7 +29,7 @@ const i18n = {
   en: {
     tagline: "Automatically tunes installed 7-Zip for your data and PC", autoProfile: "AUTO PROFILE",
     headline: "Fast, safe compression without guesswork.", intro: "Quick7Zip analyzes CPU, memory, storage and file layout, then selects practical options for the installed 7-Zip.",
-    mode: "Selected mode", waitingAnalysis: "Waiting for analysis", sourceAndOutput: "Source and destination", inputFolder: "Folder or drive to archive",
+    mode: "Selected mode", waitingAnalysis: "Waiting for analysis", sourceAndOutput: "Source and destination", inputFolder: "Folder or file to archive",
     outputArchive: "Output archive", browse: "Browse", detectedProfile: "Detected profile", storage: "Storage",
     logicalProcessors: "logical processors", memory: "Memory", files: "Files",
     autoSettings: "Automatic settings", compressionLevel: "Compression level", threads: "Threads", solid: "Solid compression", sortType: "Sort by type",
@@ -248,8 +248,6 @@ $("languageButton").addEventListener("click", () => {
   try { localStorage.setItem("quick7zip-language", language); } catch (_) { /* Optional preference storage. */ }
   applyLanguage();
 });
-$("browseInput").addEventListener("click", () => post({type: "browse_input"}));
-$("browseOutput").addEventListener("click", () => post({type: "browse_output"}));
 $("browseInput").addEventListener("click", () => post({type: "browse_input", current: $("inputPath").value.trim()}));
 $("browseOutput").addEventListener("click", () => post({type: "browse_output", current: $("outputPath").value.trim() || $("inputPath").value.trim()}));
 $("inputPath").addEventListener("input", () => { if ($("inputPath").value !== analyzedPath) analyzedPath = ""; updateStartState(); });
