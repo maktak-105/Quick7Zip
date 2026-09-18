@@ -53,6 +53,7 @@ struct OptimizationPlan {
 struct ArchiveRequest {
     std::wstring sevenZipPath;
     std::wstring inputPath;
+    std::vector<std::wstring> inputPaths;
     std::wstring outputPath;
     OptimizationPlan plan;
     bool encrypt = false;
@@ -67,8 +68,11 @@ Q7Z_API SevenZipInfo FindSevenZip();
 Q7Z_API bool IsSupportedSevenZipVersion(const std::wstring& version);
 Q7Z_API bool IsAlreadyCompressedPath(const std::wstring& path);
 Q7Z_API SystemProfile DetectSystemProfile(const std::wstring& inputPath);
+Q7Z_API SystemProfile DetectSystemProfileForPaths(const std::vector<std::wstring>& inputPaths);
 Q7Z_API bool AnalyzePath(const std::wstring& inputPath, FileProfile& result,
                          std::atomic_bool& cancel, const ProgressCallback& progress);
+Q7Z_API bool AnalyzePaths(const std::vector<std::wstring>& inputPaths, FileProfile& result,
+                          std::atomic_bool& cancel, const ProgressCallback& progress);
 Q7Z_API OptimizationPlan ChoosePlan(const SystemProfile& system, const FileProfile& files);
 Q7Z_API std::wstring ValidateArchiveRequest(const ArchiveRequest& request);
 Q7Z_API std::vector<std::wstring> BuildArguments(const ArchiveRequest& request);

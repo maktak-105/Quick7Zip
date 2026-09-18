@@ -55,6 +55,7 @@ const i18n = {
 let language = "ja";
 try { language = localStorage.getItem("quick7zip-language") || "ja"; } catch (_) { /* NavigateToString may have an opaque origin. */ }
 let analyzedPath = "";
+let currentPaths = [];
 let engineFound = false;
 let busy = false;
 let archiveStartTime = 0;
@@ -162,6 +163,28 @@ function computeDefaultOutput(inputPath) {
   return parentDir ? `${parentDir}${sep}${stem}.7z` : `${stem}.7z`;
 }
 
+function applySelectedPaths(paths, displayNames, defaultOutput) {
+  if (!paths || paths.length === 0) return;
+  currentPaths = paths;
+  const disp = displayNames || paths.map(p => {
+    const clean = p.replace(/[\\/]+$/, "");
+    const idx = Math.max(clean.lastIndexOf("\\"), clean.lastIndexOf("/"));
+    return idx >= 0 ? clean.substring(idx + 1) : clean;
+  }).join(", ");
+  $("inputPath").value = disp;
+  $("inputPath").title = paths.join("\n");
+  analyzedPath = "";
+  $("startButton").disabled = true;
+  $("analysisNote").classList.add("hidden");
+  $("analysisNote").textContent = "";
+  if (defaultOutput) {
+    $("outputPath").value = defaultOutput;
+  } else if (paths.length === 1) {
+    $("outputPath").value = computeDefaultOutput(paths[0]);
+  }
+  post({type: "analyze", paths: currentPaths});
+}
+
 webview?.addEventListener("message", ({data}) => {
   switch (data.type) {
     case "initialized":
@@ -172,16 +195,15 @@ webview?.addEventListener("message", ({data}) => {
       if (data.openSettings) {
         $("settingsModal").classList.remove("hidden");
       }
-      if (data.initialPath) {
-        $("inputPath").value = data.initialPath;
-        analyzedPath = "";
-        $("startButton").disabled = true;
-        $("analysisNote").classList.add("hidden");
-        $("analysisNote").textContent = "";
-        post({type: "analyze", path: data.initialPath});
-        $("outputPath").value = `${data.initialPath.replace(/[\\/]$/, "")}.7z`;
-        $("outputPath").value = data.defaultOutput || computeDefaultOutput(data.initialPath);
+      if (data.initialPaths && data.initialPaths.length > 0) {
+        applySelectedPaths(data.initialPaths, data.displayNames, data.defaultOutput);
+      } else if (data.initialPath) {
+        applySelectedPaths([data.initialPath], data.displayNames || data.initialPath, data.defaultOutput);
       }
+      updateStartState();
+      break;
+    case "paths_updated":
+      applySelectedPaths(data.paths, data.displayNames, data.defaultOutput);
       updateStartState();
       break;
     case "context_menu_updated":
@@ -191,16 +213,7 @@ webview?.addEventListener("message", ({data}) => {
       $("settingsModal").classList.remove("hidden");
       break;
     case "input_selected":
-      $("inputPath").value = data.path; analyzedPath = ""; $("startButton").disabled = true;
-      $("analysisNote").classList.add("hidden"); $("analysisNote").textContent = "";
-      $("inputPath").value = data.path;
-      analyzedPath = "";
-      $("startButton").disabled = true;
-      $("analysisNote").classList.add("hidden");
-      $("analysisNote").textContent = "";
-      post({type: "analyze", path: data.path});
-      $("outputPath").value = `${data.path.replace(/[\\/]$/, "")}.7z`;
-      $("outputPath").value = computeDefaultOutput(data.path);
+      applySelectedPaths([data.path], data.displayNames || data.path, data.defaultOutput);
       break;
     case "output_selected": $("outputPath").value = data.path; updateStartState(); break;
     case "analysis_started": setBusy(true, "analyzing"); break;
@@ -261,14 +274,30 @@ document.querySelectorAll(".password-visibility").forEach((button) => {
     input.focus();
   });
 });
+$("inputPath").addEventListener("wheel", (e) => {
+  if (e.deltaY !== 0) {
+    $("inputPath").scrollLeft += e.deltaY;
+    e.preventDefault();
+  }
+});
+
 $("startButton").addEventListener("click", () => {
   const input = $("inputPath").value.trim(), output = $("outputPath").value.trim();
-  if (!input || !output) return alert(t("selectPaths"));
+  if (!input || !output || currentPaths.length === 0) return alert(t("selectPaths"));
   if (input !== analyzedPath) return alert(t("reanalyze"));
   const encrypt = $("encryptToggle").checked;
   if (encrypt && ($("password").value !== $("passwordConfirm").value || !$("password").value)) return alert(t("passwordMismatch"));
   startElapsedTimer();
-  post({type: "start_archive", input, output, encrypt, encryptHeaders: $("encryptHeaders").checked, password: $("password").value, split: $("splitSize").value});
+  post({
+    type: "start_archive",
+    inputs: currentPaths,
+    input: currentPaths[0],
+    output,
+    encrypt,
+    encryptHeaders: $("encryptHeaders").checked,
+    password: $("password").value,
+    split: $("splitSize").value
+  });
 });
 $("cancelButton").addEventListener("click", () => post({type: "cancel"}));
 $("helpButton").addEventListener("click", () => $("helpModal").classList.remove("hidden"));
@@ -285,8 +314,6 @@ $("aboutLink").addEventListener("click", () => { $("helpModal").classList.add("h
 $("aboutClose").addEventListener("click", () => $("aboutModal").classList.add("hidden"));
 $("aboutModal").addEventListener("click", (event) => { if (event.target === $("aboutModal")) $("aboutModal").classList.add("hidden"); });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") { $("helpModal").classList.add("hidden"); $("aboutModal").classList.add("hidden"); }
-  if (event.key === "Escape") { $("settingsModal").classList.add("hidden"); $("helpModal").classList.add("hidden"); $("aboutModal").classList.add("hidden"); }
   if (event.key === "Escape") {
     $("settingsModal").classList.add("hidden");
     $("helpModal").classList.add("hidden");

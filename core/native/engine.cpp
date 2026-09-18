@@ -239,21 +239,27 @@ SystemProfile DetectSystemProfile(const std::wstring& inputPath) {
     return result;
 }
 
-bool AnalyzePath(const std::wstring& inputPath, FileProfile& result,
-                 std::atomic_bool& cancel, const ProgressCallback& progress) {
-    result = {};
+SystemProfile DetectSystemProfileForPaths(const std::vector<std::wstring>& inputPaths) {
+    if (inputPaths.empty()) return DetectSystemProfile(L"");
+    return DetectSystemProfile(inputPaths[0]);
+}
+
+namespace {
+
+void AnalyzeSinglePath(const fs::path& root, FileProfile& result,
+                       std::atomic_bool& cancel, const ProgressCallback& progress) {
     std::error_code ec;
-    const fs::path root(inputPath);
-    if (!fs::exists(root, ec)) return false;
+    if (!fs::exists(root, ec)) return;
     if (fs::is_regular_file(root, ec)) {
-        result.fileCount = 1;
-        result.totalBytes = fs::file_size(root, ec);
-        result.smallFileCount = result.totalBytes < 128ull * 1024;
+        ++result.fileCount;
+        const auto size = fs::file_size(root, ec);
+        result.totalBytes += size;
+        if (size < 128ull * 1024) ++result.smallFileCount;
         if (IsCompressedLike(root)) {
-            result.compressedLikeFileCount = 1;
-            result.compressedLikeBytes = result.totalBytes;
+            ++result.compressedLikeFileCount;
+            result.compressedLikeBytes += size;
         }
-        return !ec;
+        return;
     }
 
     for (const auto& child : fs::directory_iterator(root, fs::directory_options::skip_permission_denied, ec)) {
@@ -301,7 +307,32 @@ bool AnalyzePath(const std::wstring& inputPath, FileProfile& result,
             progress(L"files=" + std::to_wstring(result.fileCount) + L";bytes=" + std::to_wstring(result.totalBytes));
         }
     }
+}
+
+} // namespace
+
+bool AnalyzePath(const std::wstring& inputPath, FileProfile& result,
+                 std::atomic_bool& cancel, const ProgressCallback& progress) {
+    result = {};
+    std::error_code ec;
+    const fs::path root(inputPath);
+    if (!fs::exists(root, ec)) return false;
+    AnalyzeSinglePath(root, result, cancel, progress);
     return !cancel.load();
+}
+
+bool AnalyzePaths(const std::vector<std::wstring>& inputPaths, FileProfile& result,
+                  std::atomic_bool& cancel, const ProgressCallback& progress) {
+    result = {};
+    if (inputPaths.empty()) return false;
+    for (const auto& pathStr : inputPaths) {
+        if (cancel.load()) break;
+        std::error_code ec;
+        const fs::path root(pathStr);
+        if (!fs::exists(root, ec)) continue;
+        AnalyzeSinglePath(root, result, cancel, progress);
+    }
+    return !cancel.load() && (result.fileCount > 0 || result.directoryCount > 0);
 }
 
 OptimizationPlan ChoosePlan(const SystemProfile& system, const FileProfile& files) {
@@ -332,6 +363,18 @@ std::wstring ValidateArchiveRequest(const ArchiveRequest& request) {
     if (!IsFile(request.sevenZipPath)) return L"sevenzip_missing";
     const DWORD inputAttributes = GetFileAttributesW(request.inputPath.c_str());
     if (inputAttributes == INVALID_FILE_ATTRIBUTES) return L"input_missing";
+    std::vector<std::wstring> inputs = request.inputPaths;
+    if (inputs.empty() && !request.inputPath.empty()) inputs.push_back(request.inputPath);
+    if (inputs.empty()) return L"input_missing";
+
+    for (const auto& input : inputs) {
+        const DWORD inputAttributes = GetFileAttributesW(input.c_str());
+        if (inputAttributes == INVALID_FILE_ATTRIBUTES) return L"input_missing";
+        if ((inputAttributes & FILE_ATTRIBUTE_DIRECTORY) && SameOrChildPath(input, request.outputPath))
+            return L"output_inside_input";
+        if (!(inputAttributes & FILE_ATTRIBUTE_DIRECTORY) && _wcsicmp(FullPath(input).c_str(), FullPath(request.outputPath).c_str()) == 0)
+            return L"output_equals_input";
+    }
     if (request.outputPath.empty()) return L"output_missing";
     if ((inputAttributes & FILE_ATTRIBUTE_DIRECTORY) && SameOrChildPath(request.inputPath, request.outputPath))
         return L"output_inside_input";
@@ -360,6 +403,11 @@ std::vector<std::wstring> BuildArguments(const ArchiveRequest& request) {
     args.push_back(L"--");
     args.push_back(request.outputPath);
     args.push_back(request.inputPath);
+    if (!request.inputPaths.empty()) {
+        for (const auto& p : request.inputPaths) args.push_back(p);
+    } else {
+        args.push_back(request.inputPath);
+    }
     return args;
 }
 
@@ -408,26 +456,20 @@ bool AddRelativePath(const fs::path& path, const fs::path& workingDirectory,
     return true;
 }
 
-bool CollectHybridFileLists(const std::wstring& inputPath, HybridFileLists& lists,
-                            std::atomic_bool& cancel) {
-    const fs::path root(FullPath(inputPath));
+bool CollectHybridFileListsSingle(const fs::path& root, const fs::path& workingDir,
+                                  HybridFileLists& lists, std::atomic_bool& cancel) {
     std::error_code ec;
     if (root.empty() || !fs::exists(root, ec)) return false;
     if (fs::is_regular_file(root, ec)) {
-        lists.workingDirectory = root.parent_path();
         const auto size = fs::file_size(root, ec);
         if (ec) return false;
         auto& destination = IsCompressedLike(root) ? lists.store : lists.compress;
-        if (!AddRelativePath(root, lists.workingDirectory, destination)) return false;
-        if (IsCompressedLike(root)) lists.storeBytes = size;
-        else lists.compressBytes = size;
+        if (!AddRelativePath(root, workingDir, destination)) return false;
+        if (IsCompressedLike(root)) lists.storeBytes += size;
+        else lists.compressBytes += size;
         return true;
     }
     if (!fs::is_directory(root, ec)) return false;
-
-    lists.workingDirectory = root.parent_path();
-    if (lists.workingDirectory.empty() || lists.workingDirectory == root)
-        lists.workingDirectory = root;
 
     const auto options = fs::directory_options::skip_permission_denied;
     fs::recursive_directory_iterator it(root, options, ec), end;
@@ -444,7 +486,7 @@ bool CollectHybridFileLists(const std::wstring& inputPath, HybridFileLists& list
         if (ec) { ec.clear(); continue; }
         if (fs::is_directory(status)) {
             if (fs::is_empty(path, ec) && !ec) {
-                foundEntry |= AddRelativePath(path, lists.workingDirectory, lists.compress);
+                foundEntry |= AddRelativePath(path, workingDir, lists.compress);
             }
             ec.clear();
             continue;
@@ -453,17 +495,57 @@ bool CollectHybridFileLists(const std::wstring& inputPath, HybridFileLists& list
         const auto size = fs::file_size(path, ec);
         if (ec) { ec.clear(); continue; }
         if (IsCompressedLike(path)) {
-            foundEntry |= AddRelativePath(path, lists.workingDirectory, lists.store);
+            foundEntry |= AddRelativePath(path, workingDir, lists.store);
             lists.storeBytes += size;
         } else {
-            foundEntry |= AddRelativePath(path, lists.workingDirectory, lists.compress);
+            foundEntry |= AddRelativePath(path, workingDir, lists.compress);
             lists.compressBytes += size;
         }
     }
     if (cancel.load()) return false;
-    if (!foundEntry && lists.workingDirectory != root)
-        foundEntry = AddRelativePath(root, lists.workingDirectory, lists.compress);
+    if (!foundEntry && workingDir != root)
+        foundEntry = AddRelativePath(root, workingDir, lists.compress);
     return foundEntry;
+}
+
+bool CollectHybridFileLists(const std::vector<std::wstring>& inputPaths, HybridFileLists& lists,
+                            std::atomic_bool& cancel) {
+    if (inputPaths.empty()) return false;
+    std::vector<fs::path> roots;
+    roots.reserve(inputPaths.size());
+    for (const auto& p : inputPaths) {
+        roots.push_back(fs::path(FullPath(p)));
+    }
+    fs::path workingDir = roots[0].parent_path();
+    if (roots.size() == 1 && fs::is_directory(roots[0])) {
+        workingDir = roots[0].parent_path();
+        if (workingDir.empty() || workingDir == roots[0]) workingDir = roots[0];
+    } else {
+        for (size_t i = 1; i < roots.size(); ++i) {
+            fs::path p = roots[i].parent_path();
+            while (!workingDir.empty() && workingDir != p) {
+                auto rel = p.lexically_relative(workingDir);
+                if (!rel.empty() && rel.native().rfind(L"..", 0) != 0) {
+                    break;
+                }
+                workingDir = workingDir.parent_path();
+            }
+        }
+    }
+    if (workingDir.empty()) workingDir = roots[0].parent_path();
+    lists.workingDirectory = workingDir;
+
+    bool anyFound = false;
+    for (const auto& root : roots) {
+        if (cancel.load()) return false;
+        anyFound |= CollectHybridFileListsSingle(root, workingDir, lists, cancel);
+    }
+    return anyFound;
+}
+
+bool CollectHybridFileLists(const std::wstring& inputPath, HybridFileLists& lists,
+                            std::atomic_bool& cancel) {
+    return CollectHybridFileLists(std::vector<std::wstring>{inputPath}, lists, cancel);
 }
 
 struct TempListFile {
@@ -636,6 +718,9 @@ int RunArchive(const ArchiveRequest& request, std::atomic_bool& cancel, const Pr
     if (!ValidateArchiveRequest(request).empty()) return -3;
     HybridFileLists lists;
     if (!CollectHybridFileLists(request.inputPath, lists, cancel)) return cancel.load() ? ERROR_CANCELLED : -4;
+    std::vector<std::wstring> inputs = request.inputPaths;
+    if (inputs.empty() && !request.inputPath.empty()) inputs.push_back(request.inputPath);
+    if (!CollectHybridFileLists(inputs, lists, cancel)) return cancel.load() ? ERROR_CANCELLED : -4;
     if (!RemoveExistingArchiveOutputs(request)) return -6;
 
     const bool hasCompress = !lists.compress.empty();

@@ -47,6 +47,8 @@ void LogDebug(const std::wstring& text) {
 }
 
 constexpr UINT WM_Q7Z_JSON = WM_APP + 41;
+constexpr UINT_PTR TIMER_ID_PATHS_BATCH = 1001;
+constexpr ULONG_PTR Q7Z_COPYDATA_MAGIC = 0x51375A;
 constexpr int kBaseWindowWidth = 620;
 constexpr int kBaseWindowHeight = 620;
 HWND g_window = nullptr;
@@ -55,9 +57,18 @@ ICoreWebView2* g_webview = nullptr;
 std::atomic_bool g_cancel{false};
 std::atomic_bool g_busy{false};
 std::mutex g_profileMutex;
-std::wstring g_analyzedPath;
+std::vector<std::wstring> g_initialPaths;
+std::vector<std::wstring> g_analyzedPaths;
 SystemProfile g_system;
 FileProfile g_files;
+
+void AddInitialPath(const std::wstring& rawPath) {
+    if (rawPath.empty()) return;
+    for (const auto& p : g_initialPaths) {
+        if (_wcsicmp(p.c_str(), rawPath.c_str()) == 0) return;
+    }
+    g_initialPaths.push_back(rawPath);
+}
 
 std::wstring LoadBundledHtml(HINSTANCE instance) {
     HRSRC resource = FindResourceW(instance, MAKEINTRESOURCEW(201), RT_RCDATA);
@@ -72,7 +83,6 @@ std::wstring LoadBundledHtml(HINSTANCE instance) {
     MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, bytes, static_cast<int>(size), html.data(), chars);
     return html;
 }
-std::wstring g_initialPath;
 bool g_openSettings = false;
 
 std::wstring NormalizePath(std::wstring path) {
@@ -140,6 +150,38 @@ std::wstring ComputeDefaultOutputPath(const std::wstring& inputPath) {
         parent = fs::current_path(ec);
     }
     return (parent / (stem + L".7z")).wstring();
+}
+
+std::wstring ComputeDefaultOutputPathForPaths(const std::vector<std::wstring>& inputPaths) {
+    if (inputPaths.empty()) return {};
+    if (inputPaths.size() == 1) return ComputeDefaultOutputPath(inputPaths[0]);
+
+    std::error_code ec;
+    fs::path p0(inputPaths[0]);
+    fs::path parent = p0.parent_path();
+    std::wstring stem;
+    if (parent.has_filename() && !parent.filename().empty()) {
+        stem = parent.filename().wstring();
+    }
+    if (stem.empty()) {
+        stem = L"archive";
+    }
+    if (parent.empty()) {
+        parent = fs::current_path(ec);
+    }
+    return (parent / (stem + L".7z")).wstring();
+}
+
+std::wstring ComputeDisplayNames(const std::vector<std::wstring>& inputPaths) {
+    std::wstringstream ss;
+    for (size_t i = 0; i < inputPaths.size(); ++i) {
+        if (i > 0) ss << L", ";
+        fs::path p(inputPaths[i]);
+        std::wstring name = p.filename().wstring();
+        if (name.empty()) name = p.wstring();
+        ss << name;
+    }
+    return ss.str();
 }
 
 std::wstring GetCurrentExecutablePath() {
@@ -335,6 +377,47 @@ double JsonNumber(const std::wstring& json, const std::wstring& key, double fall
     try { return std::stod(json.substr(start, pos - start)); } catch (...) { return fallback; }
 }
 
+std::vector<std::wstring> JsonStringArray(const std::wstring& json, const std::wstring& key) {
+    std::vector<std::wstring> result;
+    const std::wstring marker = L"\"" + key + L"\"";
+    std::size_t pos = json.find(marker);
+    if (pos == std::wstring::npos) return result;
+    pos = json.find(L':', pos + marker.size());
+    if (pos == std::wstring::npos) return result;
+    pos = json.find(L'[', pos + 1);
+    if (pos == std::wstring::npos) return result;
+    ++pos;
+    while (pos < json.size()) {
+        while (pos < json.size() && (iswspace(json[pos]) || json[pos] == L',')) ++pos;
+        if (pos >= json.size() || json[pos] == L']') break;
+        if (json[pos] == L'\"') {
+            ++pos;
+            std::wstring item;
+            while (pos < json.size()) {
+                wchar_t c = json[pos++];
+                if (c == L'\"') break;
+                if (c != L'\\' || pos >= json.size()) { item.push_back(c); continue; }
+                wchar_t escaped = json[pos++];
+                switch (escaped) {
+                    case L'\"': item.push_back(L'\"'); break;
+                    case L'\\': item.push_back(L'\\'); break;
+                    case L'/': item.push_back(L'/'); break;
+                    case L'b': item.push_back(L'\b'); break;
+                    case L'f': item.push_back(L'\f'); break;
+                    case L'n': item.push_back(L'\n'); break;
+                    case L'r': item.push_back(L'\r'); break;
+                    case L't': item.push_back(L'\t'); break;
+                    default: item.push_back(escaped);
+                }
+            }
+            result.push_back(item);
+        } else {
+            ++pos;
+        }
+    }
+    return result;
+}
+
 void ResizeToContentHeight(int clientHeight) {
     if (!g_window || clientHeight <= 0) return;
     RECT clientRect{};
@@ -350,7 +433,6 @@ void ResizeToContentHeight(int clientHeight) {
                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
 }
 
-std::wstring PickFolder() {
 std::wstring PickFolder(const std::wstring& initialDir = {}) {
     IFileOpenDialog* dialog = nullptr;
     if (FAILED(CoCreateInstance(CLSID_FileOpenDialog, nullptr, CLSCTX_INPROC_SERVER,
@@ -381,7 +463,6 @@ std::wstring PickFolder(const std::wstring& initialDir = {}) {
     return result;
 }
 
-std::wstring PickArchivePath() {
 std::wstring PickArchivePath(const std::wstring& initialDir = {}, const std::wstring& defaultName = L"archive.7z") {
     IFileSaveDialog* dialog = nullptr;
     if (FAILED(CoCreateInstance(CLSID_FileSaveDialog, nullptr, CLSCTX_INPROC_SERVER,
@@ -389,7 +470,6 @@ std::wstring PickArchivePath(const std::wstring& initialDir = {}, const std::wst
     const COMDLG_FILTERSPEC filters[] = {{L"7-Zip archive (*.7z)", L"*.7z"}, {L"All files", L"*.*"}};
     dialog->SetFileTypes(2, filters);
     dialog->SetDefaultExtension(L"7z");
-    dialog->SetFileName(L"archive.7z");
     dialog->SetFileName(defaultName.empty() ? L"archive.7z" : defaultName.c_str());
     if (!initialDir.empty()) {
         IShellItem* folderItem = nullptr;
@@ -458,23 +538,28 @@ std::uint64_t ArchiveOutputBytes(const std::wstring& outputPath, const std::wstr
     return total;
 }
 
-void BeginAnalysis(const std::wstring& path) {
-    if (path.empty() || g_busy.exchange(true)) return;
+void BeginAnalysis(const std::vector<std::wstring>& paths) {
+    if (paths.empty() || g_busy.exchange(true)) return;
     g_cancel.store(false);
     QueueJson(L"{\"type\":\"analysis_started\"}");
-    std::thread([path] {
+    std::thread([paths] {
         FileProfile files;
-        const auto system = DetectSystemProfile(path);
-        const bool ok = AnalyzePath(path, files, g_cancel, [](const std::wstring& status) {
-            QueueJson(L"{\"type\":\"analysis_progress\",\"status\":\"" + JsonEscape(status) + L"\"}");
-        });
+        const auto system = DetectSystemProfileForPaths(paths);
+        const bool ok = (paths.size() == 1)
+            ? AnalyzePath(paths[0], files, g_cancel, [](const std::wstring& status) {
+                  QueueJson(L"{\"type\":\"analysis_progress\",\"status\":\"" + JsonEscape(status) + L"\"}");
+              })
+            : AnalyzePaths(paths, files, g_cancel, [](const std::wstring& status) {
+                  QueueJson(L"{\"type\":\"analysis_progress\",\"status\":\"" + JsonEscape(status) + L"\"}");
+              });
         if (ok) {
             const auto plan = ChoosePlan(system, files);
             {
                 std::lock_guard<std::mutex> lock(g_profileMutex);
-                g_analyzedPath = path; g_system = system; g_files = files; g_plan = plan;
+                g_analyzedPaths = paths; g_system = system; g_files = files; g_plan = plan;
             }
-            QueueJson(ProfileJson(path, system, files, plan));
+            std::wstring displayPath = paths.size() == 1 ? paths[0] : ComputeDisplayNames(paths);
+            QueueJson(ProfileJson(displayPath, system, files, plan));
         } else {
             QueueJson(g_cancel.load() ? L"{\"type\":\"cancelled\"}" :
                                        L"{\"type\":\"error\",\"message\":\"analysis_failed\"}");
@@ -486,7 +571,11 @@ void BeginAnalysis(const std::wstring& path) {
 void BeginArchive(const std::wstring& json) {
     if (g_busy.exchange(true)) return;
     ArchiveRequest request;
+    request.inputPaths = JsonStringArray(json, L"inputs");
     request.inputPath = JsonString(json, L"input");
+    if (request.inputPaths.empty() && !request.inputPath.empty()) {
+        request.inputPaths.push_back(request.inputPath);
+    }
     request.outputPath = JsonString(json, L"output");
     request.encrypt = JsonBool(json, L"encrypt");
     request.encryptHeaders = JsonBool(json, L"encryptHeaders", true);
@@ -495,7 +584,7 @@ void BeginArchive(const std::wstring& json) {
     std::uint64_t inputBytes = 0;
     {
         std::lock_guard<std::mutex> lock(g_profileMutex);
-        if (request.inputPath != g_analyzedPath) {
+        if (request.inputPaths != g_analyzedPaths) {
             g_busy.store(false);
             QueueJson(L"{\"type\":\"error\",\"message\":\"reanalyze_required\"}");
             return;
@@ -504,7 +593,7 @@ void BeginArchive(const std::wstring& json) {
         inputBytes = g_files.totalBytes;
     }
     const auto sevenZip = FindSevenZip();
-    if (!sevenZip.found || request.inputPath.empty() || request.outputPath.empty() ||
+    if (!sevenZip.found || request.inputPaths.empty() || request.outputPath.empty() ||
         (request.encrypt && request.password.empty())) {
         SecureZeroMemory(request.password.data(), request.password.size() * sizeof(wchar_t));
         g_busy.store(false);
@@ -543,7 +632,8 @@ void HandleWebMessage(const std::wstring& json) {
         EnsureInitialContextMenu();
         const auto sevenZip = FindSevenZip();
         const bool contextMenu = IsContextMenuEnabled();
-        const std::wstring defaultOutput = ComputeDefaultOutputPath(g_initialPath);
+        const std::wstring defaultOutput = ComputeDefaultOutputPathForPaths(g_initialPaths);
+        const std::wstring displayNames = ComputeDisplayNames(g_initialPaths);
         std::wstringstream reply;
         reply << L"{\"type\":\"initialized\",\"found\":" << (sevenZip.found ? L"true" : L"false")
               << L",\"supported\":" << (IsSupportedSevenZipVersion(sevenZip.version) ? L"true" : L"false")
@@ -551,9 +641,15 @@ void HandleWebMessage(const std::wstring& json) {
               << L"\",\"version\":\"" << JsonEscape(sevenZip.version)
               << L"\",\"contextMenu\":" << (contextMenu ? L"true" : L"false")
               << L",\"openSettings\":" << (g_openSettings ? L"true" : L"false")
-              << L",\"initialPath\":\"" << JsonEscape(g_initialPath) << L"\"}";
-              << L",\"initialPath\":\"" << JsonEscape(g_initialPath) << L"\""
-              << L",\"defaultOutput\":\"" << JsonEscape(defaultOutput) << L"\"}";
+              << L",\"initialPath\":\"" << JsonEscape(g_initialPaths.empty() ? L"" : g_initialPaths[0]) << L"\""
+              << L",\"displayNames\":\"" << JsonEscape(displayNames) << L"\""
+              << L",\"defaultOutput\":\"" << JsonEscape(defaultOutput) << L"\""
+              << L",\"initialPaths\":[";
+        for (size_t i = 0; i < g_initialPaths.size(); ++i) {
+            if (i > 0) reply << L",";
+            reply << L"\"" << JsonEscape(g_initialPaths[i]) << L"\"";
+        }
+        reply << L"]}";
         LogDebug(L"Reply to initialize: " + reply.str());
         QueueJson(reply.str());
         if (g_openSettings) {
@@ -566,17 +662,22 @@ void HandleWebMessage(const std::wstring& json) {
         reply << L"{\"type\":\"context_menu_updated\",\"enabled\":" << (IsContextMenuEnabled() ? L"true" : L"false") << L"}";
         QueueJson(reply.str());
     } else if (type == L"browse_input") {
-        const auto path = PickFolder();
         const std::wstring current = JsonString(json, L"current");
-        std::wstring initialDir = current.empty() ? g_initialPath : current;
+        std::wstring initialDir = current;
+        if (initialDir.empty() && !g_initialPaths.empty()) initialDir = g_initialPaths[0];
         std::error_code ec;
         if (!initialDir.empty() && fs::is_regular_file(initialDir, ec)) {
             initialDir = fs::path(initialDir).parent_path().wstring();
         }
         const auto path = PickFolder(initialDir);
-        if (!path.empty()) QueueJson(L"{\"type\":\"input_selected\",\"path\":\"" + JsonEscape(path) + L"\"}");
+        if (!path.empty()) {
+            g_initialPaths = {path};
+            const std::wstring defOut = ComputeDefaultOutputPath(path);
+            QueueJson(L"{\"type\":\"input_selected\",\"path\":\"" + JsonEscape(path) +
+                      L"\",\"displayNames\":\"" + JsonEscape(path) +
+                      L"\",\"defaultOutput\":\"" + JsonEscape(defOut) + L"\"}");
+        }
     } else if (type == L"browse_output") {
-        const auto path = PickArchivePath();
         const std::wstring current = JsonString(json, L"current");
         std::wstring initialDir;
         std::wstring defaultName = L"archive.7z";
@@ -586,15 +687,20 @@ void HandleWebMessage(const std::wstring& json) {
             if (p.has_filename()) {
                 defaultName = p.filename().wstring();
             }
-        } else if (!g_initialPath.empty()) {
-            fs::path p(ComputeDefaultOutputPath(g_initialPath));
+        } else if (!g_initialPaths.empty()) {
+            fs::path p(ComputeDefaultOutputPathForPaths(g_initialPaths));
             initialDir = p.parent_path().wstring();
             if (p.has_filename()) defaultName = p.filename().wstring();
         }
         const auto path = PickArchivePath(initialDir, defaultName);
         if (!path.empty()) QueueJson(L"{\"type\":\"output_selected\",\"path\":\"" + JsonEscape(path) + L"\"}");
     } else if (type == L"analyze") {
-        BeginAnalysis(JsonString(json, L"path"));
+        auto paths = JsonStringArray(json, L"paths");
+        if (paths.empty()) {
+            auto single = JsonString(json, L"path");
+            if (!single.empty()) paths.push_back(single);
+        }
+        BeginAnalysis(paths);
     } else if (type == L"start_archive") {
         BeginArchive(json);
     } else if (type == L"cancel") {
@@ -686,6 +792,38 @@ public:
 
 LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
+        case WM_COPYDATA: {
+            auto* cds = reinterpret_cast<PCOPYDATASTRUCT>(lParam);
+            if (cds && cds->dwData == Q7Z_COPYDATA_MAGIC && cds->lpData && cds->cbData >= sizeof(wchar_t)) {
+                std::wstring received(reinterpret_cast<const wchar_t*>(cds->lpData));
+                LogDebug(L"WM_COPYDATA received: " + received);
+                AddInitialPath(received);
+                SetTimer(window, TIMER_ID_PATHS_BATCH, 250, nullptr);
+            }
+            return TRUE;
+        }
+        case WM_TIMER: {
+            if (wParam == TIMER_ID_PATHS_BATCH) {
+                KillTimer(window, TIMER_ID_PATHS_BATCH);
+                LogDebug(L"TIMER_ID_PATHS_BATCH triggered. Count: " + std::to_wstring(g_initialPaths.size()));
+                if (g_webview && !g_initialPaths.empty()) {
+                    const std::wstring defaultOutput = ComputeDefaultOutputPathForPaths(g_initialPaths);
+                    const std::wstring displayNames = ComputeDisplayNames(g_initialPaths);
+                    std::wstringstream msg;
+                    msg << L"{\"type\":\"paths_updated\",\"paths\":[";
+                    for (size_t i = 0; i < g_initialPaths.size(); ++i) {
+                        if (i > 0) msg << L",";
+                        msg << L"\"" << JsonEscape(g_initialPaths[i]) << L"\"";
+                    }
+                    msg << L"],\"displayNames\":\"" << JsonEscape(displayNames)
+                        << L"\",\"defaultOutput\":\"" << JsonEscape(defaultOutput) << L"\"}";
+                    QueueJson(msg.str());
+                    BeginAnalysis(g_initialPaths);
+                }
+                return 0;
+            }
+            break;
+        }
         case WM_SIZE:
             if (g_controller) { RECT bounds{}; GetClientRect(window, &bounds); g_controller->put_Bounds(bounds); }
             return 0;
@@ -728,45 +866,60 @@ LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lPa
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     LogDebug(L"--- wWinMain Started ---");
     LogDebug(L"CommandLine: " + std::wstring(GetCommandLineW()));
-    SetProcessDPIAware();
-    if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED))) return 1;
+
+    HANDLE hMutex = CreateMutexW(nullptr, FALSE, L"Local\\Quick7Zip_SingleInstance_Mutex");
+    const bool isSecondary = (GetLastError() == ERROR_ALREADY_EXISTS);
 
     int argc = 0;
     LPWSTR* argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    std::vector<std::wstring> launchPaths;
     if (argv) {
-        if (argc > 1 && argv[1] && argv[1][0] != L'\0') {
-            g_initialPath = argv[1];
-            std::wstring rawPath = argv[1];
-            while (!rawPath.empty() && (rawPath.back() == L'\"' || rawPath.back() == L' ' || rawPath.back() == L'\t')) {
-                rawPath.pop_back();
         for (int i = 1; i < argc; ++i) {
-            if (!argv[i]) continue;
             if (!argv[i] || argv[i][0] == L'\0') continue;
             if (_wcsicmp(argv[i], L"--settings") == 0 || _wcsicmp(argv[i], L"/settings") == 0) {
                 g_openSettings = true;
-            } else if (g_initialPath.empty() && argv[i][0] != L'\0') {
-                std::wstring rawPath = argv[i];
-                while (!rawPath.empty() && (rawPath.back() == L'\"' || rawPath.back() == L' ' || rawPath.back() == L'\t')) {
-                    rawPath.pop_back();
-                }
-                if (rawPath.size() > 3 && (rawPath.back() == L'\\' || rawPath.back() == L'/')) {
-                    rawPath.pop_back();
-                }
-                g_initialPath = rawPath;
-            } else if (g_initialPath.empty()) {
-                g_initialPath = NormalizePath(argv[i]);
+            } else {
+                launchPaths.push_back(NormalizePath(argv[i]));
             }
-            if (rawPath.size() > 3 && (rawPath.back() == L'\\' || rawPath.back() == L'/')) {
-                rawPath.pop_back();
-            }
-            g_initialPath = rawPath;
         }
         LocalFree(argv);
     }
-    if (g_initialPath.empty()) {
-        g_initialPath = ExtractPathFromCommandLine(GetCommandLineW());
+    if (launchPaths.empty()) {
+        std::wstring extracted = ExtractPathFromCommandLine(GetCommandLineW());
+        if (!extracted.empty()) launchPaths.push_back(extracted);
     }
-    LogDebug(L"g_initialPath: " + g_initialPath);
+
+    if (isSecondary) {
+        LogDebug(L"Secondary instance detected. Searching for primary window...");
+        HWND primaryWnd = nullptr;
+        for (int retry = 0; retry < 30; ++retry) {
+            primaryWnd = FindWindowW(L"Quick7ZipWindow", nullptr);
+            if (primaryWnd) break;
+            Sleep(100);
+        }
+        if (primaryWnd) {
+            LogDebug(L"Primary window found. Sending paths via WM_COPYDATA.");
+            for (const auto& p : launchPaths) {
+                COPYDATASTRUCT cds{};
+                cds.dwData = Q7Z_COPYDATA_MAGIC;
+                cds.cbData = static_cast<DWORD>((p.size() + 1) * sizeof(wchar_t));
+                cds.lpData = const_cast<wchar_t*>(p.c_str());
+                SendMessageW(primaryWnd, WM_COPYDATA, 0, reinterpret_cast<LPARAM>(&cds));
+            }
+        } else {
+            LogDebug(L"Primary window NOT found after retries.");
+        }
+        if (hMutex) CloseHandle(hMutex);
+        return 0;
+    }
+
+    SetProcessDPIAware();
+    if (FAILED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED))) return 1;
+
+    for (const auto& p : launchPaths) {
+        AddInitialPath(p);
+    }
+    LogDebug(L"Primary instance started with " + std::to_wstring(g_initialPaths.size()) + L" paths.");
     EnsureInitialContextMenu();
     SetCurrentProcessExplicitAppUserModelID(L"maktak-105.Quick7Zip");
     const wchar_t className[] = L"Quick7ZipWindow";
@@ -785,7 +938,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     g_window = CreateWindowExW(0, className, L"Quick7Zip", WS_OVERLAPPEDWINDOW,
                                CW_USEDEFAULT, CW_USEDEFAULT, kBaseWindowWidth, kBaseWindowHeight,
                                nullptr, nullptr, instance, nullptr);
-    if (!g_window) { CoUninitialize(); return 2; }
     if (!g_window) {
         LogDebug(L"CreateWindowExW failed");
         CoUninitialize();
@@ -802,6 +954,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     SendMessageW(g_window, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(wc.hIconSm));
     ShowWindow(g_window, show);
     UpdateWindow(g_window);
+    if (!g_initialPaths.empty()) {
+        SetTimer(g_window, TIMER_ID_PATHS_BATCH, 250, nullptr);
+    }
 
     const fs::path loaderPath = fs::path([] {
         wchar_t path[MAX_PATH * 4]{}; GetModuleFileNameW(nullptr, path, static_cast<DWORD>(std::size(path))); return std::wstring(path);
@@ -838,6 +993,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
         DispatchMessageW(&message);
     }
     if (loader) FreeLibrary(loader);
+    if (hMutex) CloseHandle(hMutex);
     CoUninitialize();
     return static_cast<int>(message.wParam);
 }

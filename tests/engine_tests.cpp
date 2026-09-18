@@ -45,6 +45,17 @@ int main() {
     if (std::find(args.begin(), args.end(), L"-v3900m") == args.end()) return 6;
     if (!IsSupportedSevenZipVersion(L"26.02") || IsSupportedSevenZipVersion(L"26.01")) return 7;
 
+    ArchiveRequest multiRequest;
+    multiRequest.inputPaths = {L"C:\\data\\file1.txt", L"C:\\data\\file2.txt"};
+    multiRequest.outputPath = L"C:\\data\\archive.7z";
+    multiRequest.plan = plan;
+    const auto multiArgs = BuildArguments(multiRequest);
+    if (std::find(multiArgs.begin(), multiArgs.end(), L"C:\\data\\file1.txt") == multiArgs.end()) return 11;
+    if (std::find(multiArgs.begin(), multiArgs.end(), L"C:\\data\\file2.txt") == multiArgs.end()) return 12;
+
+    const auto multiProfile = DetectSystemProfileForPaths({L"C:\\data\\file1.txt", L"C:\\data\\file2.txt"});
+    if (multiProfile.driveRoot != L"C:\\") return 13;
+
     std::cout << "Quick7Zip engine tests passed\n";
     return 0;
 }
