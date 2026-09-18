@@ -14,7 +14,7 @@
 #include <commctrl.h>
 #include <WebView2.h>
 
-#include "engine.h"
+#include "../engine/engine.h"
 
 #include <atomic>
 #include <algorithm>

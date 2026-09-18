@@ -7,6 +7,12 @@
 - Second digit: bug fixes
 - Third digit: documentation and other changes
 
+## 2.2.1 (2026-09-18)
+
+- Adopted Quick series standard project directory template (reorganized source, scripts, and documentation).
+- Isolated build intermediate artifacts and removed redundant HTML file from distribution package.
+- Cleaned up README and documentation (added Releases link, simplified output replacement description).
+
 ## 2.2.0 (2026-09-18)
 
 - Improved folder and file selection handling in the explorer browse dialog (allow selecting a folder directly without navigating into it).

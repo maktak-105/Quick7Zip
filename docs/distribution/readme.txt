@@ -1,5 +1,5 @@
 Quick7Zip - Adaptive 7-Zip Frontend for Windows
-Distribution package  v2.2.0 stable release
+Distribution package  v2.2.1 stable release
 
 GitHub
 ------
@@ -24,7 +24,7 @@ The CLI is Quick7Zip_cli.exe. Run `Quick7Zip_cli.exe --help` for its options.
 Important behavior
 ------------------
 - Quick7Zip does not bundle 7-Zip. It detects the user's installed 7z.exe.
-- An existing output archive is replaced when explicitly selected; output inside the input folder is still rejected.
+- An existing output archive is replaced when explicitly selected.
 - Dictionary size, word size, and solid block size use the installed 7-Zip defaults rather than Quick7Zip benchmark tuning.
 - Encryption passwords are sent to 7-Zip through standard input, not command-line arguments.
 - Split volumes are one logical archive and do not improve compression speed.

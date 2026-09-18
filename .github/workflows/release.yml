@@ -38,25 +38,24 @@ jobs:
         shell: pwsh
         run: |
           $env:PYTHONIOENCODING = 'utf-8'
-          python build_native.py
+          python scripts/build.py
           if ($LASTEXITCODE -ne 0) { throw 'Native build failed' }
       - name: Package flat distribution
         shell: pwsh
         run: |
           $files = @(
-            'dist/binary/Quick7Zip.exe',
-            'dist/binary/Quick7Zip_cli.exe',
-            'dist/binary/WebView2Loader.dll',
-            'dist/binary/index.html',
-            'dist/documents/readme.txt',
-            'dist/documents/readme_jp.txt',
-            'dist/documents/history.txt',
-            'dist/documents/history_jp.txt',
-            'dist/documents/LICENSE.txt',
-            'dist/documents/LICENSE_jp.txt',
-            'dist/documents/THIRD_PARTY_NOTICES.txt',
-            'dist/documents/WEBVIEW2_LICENSE.txt',
-            'dist/documents/WEBVIEW2_NOTICE.txt'
+            'dist/Quick7Zip.exe',
+            'dist/Quick7Zip_cli.exe',
+            'dist/WebView2Loader.dll',
+            'docs/distribution/readme.txt',
+            'docs/distribution/readme_jp.txt',
+            'docs/distribution/history.txt',
+            'docs/distribution/history_jp.txt',
+            'docs/distribution/LICENSE.txt',
+            'docs/distribution/LICENSE_jp.txt',
+            'docs/distribution/THIRD_PARTY_NOTICES.txt',
+            'docs/distribution/WEBVIEW2_LICENSE.txt',
+            'docs/distribution/WEBVIEW2_NOTICE.txt'
           )
           foreach ($file in $files) { if (!(Test-Path -LiteralPath $file)) { throw "Missing distribution file: $file" } }
           $staging = Join-Path $env:RUNNER_TEMP 'Quick7Zip-package'

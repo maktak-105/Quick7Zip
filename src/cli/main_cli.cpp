@@ -1,6 +1,6 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
-#include "engine.h"
+#include "../engine/engine.h"
 #include <windows.h>
 
 #include <atomic>
@@ -12,7 +12,7 @@ using namespace quick7zip;
 namespace {
 
 void PrintHelp() {
-    std::wcout << LR"(Quick7Zip CLI v2.2.0
+    std::wcout << LR"(Quick7Zip CLI v2.2.1
 
 Usage:
   Quick7Zip_cli.exe --analyze <folder>

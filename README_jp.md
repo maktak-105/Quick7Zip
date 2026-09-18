@@ -2,7 +2,8 @@
 
 Quick7Zipは、インストール済みの7-Zipを利用するWindows向け自動最適化フロントエンドです。ストレージ種別、CPU、メモリ、ファイル数、合計サイズ、ファイル構成を分析してから、実用的な圧縮オプションを選択します。
 
-> v2.2.0正式リリースです。
+> v2.2.1正式リリースです。
+> [GitHub Releases](https://github.com/maktak-105/Quick7Zip/releases)
 
 ## 差別化ポイント
 
@@ -17,7 +18,7 @@ Quick7Zipは、インストール済みの7-Zipを利用するWindows向け自�
 - JPEG、動画、現行Office、既存アーカイブなどは再圧縮せず`Copy`格納し、その他をLZMA2で圧縮します。
 - 圧縮中の経過時間を0.2秒ごとに更新し、完了後も最終時間を表示します。
 - フォルダ選択時に自動分析し、直接入力時はEnterまたはフォーカス移動で分析します。独立した分析ボタンはありません。
-- 明示的に指定した既存の出力アーカイブは置き換えます。ただし入力フォルダ内や入力ファイル自身への出力は引き続き拒否します。
+- 明示的に指定した既存の出力アーカイブは置き換えます（上書き保存に対応）。
 - 日本語／英語UI、GUI／CLIで同じネイティブエンジンを利用します。
 
 ## 動作環境
@@ -62,7 +63,7 @@ Quick7ZipのソースコードはMIT Licenseです。[LICENSE](LICENSE)を参照
 
 7-Zipは利用者が別途インストールし、本プロジェクトでは再配布しません。主なライセンスはGNU LGPL 2.1以降で、一部コンポーネントには追加ライセンスがあります。[7-Zip公式ライセンス](https://www.7-zip.org/license.txt)を参照してください。
 
-配布パッケージにはMicrosoftの`WebView2Loader.dll`を含めます。ライセンスとNOTICEは`dist/documents`に保持します。[THIRD_PARTY_NOTICES.txt](dist/documents/THIRD_PARTY_NOTICES.txt)を参照してください。
+配布パッケージにはMicrosoftの`WebView2Loader.dll`を含めます。ライセンスとNOTICEは`docs/distribution`に保持します。[THIRD_PARTY_NOTICES.txt](docs/distribution/THIRD_PARTY_NOTICES.txt)を参照してください。
 
 ## 免責事項
 

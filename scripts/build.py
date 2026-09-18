@@ -36,10 +36,15 @@ def run(command, cwd=None):
 
 
 def build():
-    root = os.path.dirname(__file__)
-    native = os.path.join(root, "core", "native")
-    binary = os.path.join(root, "dist", "binary")
-    os.makedirs(binary, exist_ok=True)
+    script_dir = os.path.dirname(__file__)
+    root = os.path.dirname(script_dir)
+    src_dir = os.path.join(root, "src")
+    intermediate_dir = os.path.join(root, "build", "intermediate")
+    dist_dir = os.path.join(root, "dist")
+
+    os.makedirs(intermediate_dir, exist_ok=True)
+    os.makedirs(dist_dir, exist_ok=True)
+
     compiler = find_compiler()
     if not compiler:
         raise RuntimeError("MinGW-w64 g++ was not found")
@@ -55,32 +60,33 @@ def build():
         raise RuntimeError(f"WebView2 SDK headers were not found: {include}")
 
     import bundle_html
-    bundle_html.bundle(binary)
+    bundle_html.bundle(intermediate_dir)
 
-    resource = os.path.join(native, "Quick7Zip_res.o")
-    run([windres, "Quick7Zip.rc", "-O", "coff", "-o", resource], cwd=native)
+    app_dir = os.path.join(src_dir, "app")
+    resource = os.path.join(intermediate_dir, "Quick7Zip_res.o")
+    run([windres, "Quick7Zip.rc", "-O", "coff", "-o", resource], cwd=app_dir)
 
     common = [compiler, "-O3", "-std=c++17", "-static", "-municode"]
-    engine = os.path.join(native, "engine.cpp")
+    engine = os.path.join(src_dir, "engine", "engine.cpp")
     libraries = ["-lkernel32", "-ladvapi32", "-lversion", "-lshlwapi"]
 
-    run(common + [engine, os.path.join(native, "main_cli.cpp"), resource,
-         "-o", os.path.join(binary, f"{APP_NAME}_cli.exe")] + libraries)
+    # CLI build
+    run(common + [engine, os.path.join(src_dir, "cli", "main_cli.cpp"), resource,
+         "-o", os.path.join(dist_dir, f"{APP_NAME}_cli.exe")] + libraries)
 
+    # GUI build
     gui_libraries = libraries + ["-luser32", "-lgdi32", "-lole32", "-loleaut32", "-luuid", "-lshell32", "-lcomctl32"]
-    run(common + ["-mwindows", f"-I{include}", engine, os.path.join(native, "webview_main.cpp"), resource,
-         "-o", os.path.join(binary, f"{APP_NAME}.exe")] + gui_libraries)
+    run(common + ["-mwindows", f"-I{include}", engine, os.path.join(src_dir, "app", "main_gui.cpp"), resource,
+         "-o", os.path.join(dist_dir, f"{APP_NAME}.exe")] + gui_libraries)
 
     loader = os.environ.get("WEBVIEW2_LOADER") or os.path.join(os.path.dirname(include), "x64", "WebView2Loader.dll")
     if not os.path.isfile(loader):
         loader = r"C:\tools\webview2\build\native\x64\WebView2Loader.dll"
     if not os.path.isfile(loader):
         raise RuntimeError(f"WebView2Loader.dll was not found: {loader}")
-    shutil.copy2(loader, os.path.join(binary, "WebView2Loader.dll"))
-    obsolete_dll = os.path.join(binary, "engine_x64.dll")
-    if os.path.isfile(obsolete_dll):
-        os.remove(obsolete_dll)
-    print(f"\n[OK] Built Quick7Zip into {binary}")
+    shutil.copy2(loader, os.path.join(dist_dir, "WebView2Loader.dll"))
+
+    print(f"\n[OK] Built Quick7Zip into {dist_dir}")
 
 
 if __name__ == "__main__":

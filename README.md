@@ -2,7 +2,7 @@
 
 Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It analyzes storage type, CPU, memory, file count, total size, and file composition before selecting practical compression options.
 
-> Stable release v2.2.0.
+> Stable release v2.2.1.
 > [GitHub Releases](https://github.com/maktak-105/Quick7Zip/releases)
 
 ## What makes it different
@@ -17,7 +17,7 @@ Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It
 - Stores JPEG, modern media, current Office files, and existing archives with `Copy`, while compressing other files with LZMA2.
 - Updates elapsed compression time every 0.2 seconds and preserves the final time after completion.
 - Analyzes immediately after folder selection; direct path entry triggers analysis on Enter or focus change, without a separate Analyze button.
-- Replaces an explicitly selected existing output archive, while still rejecting outputs inside the input folder or equal to the input file.
+- Replaces an explicitly selected existing output archive.
 - Provides Japanese and English UI, GUI and CLI from one native engine.
 
 ## Requirements
@@ -62,7 +62,7 @@ Quick7Zip source code is MIT licensed. See [LICENSE](LICENSE).
 
 7-Zip is installed separately and is not redistributed by this project. It is primarily licensed under GNU LGPL 2.1 or later, with additional licenses for some components. See [7-Zip's authoritative license](https://www.7-zip.org/license.txt).
 
-The binary package includes Microsoft's `WebView2Loader.dll`; its license and notice are preserved in `dist/documents`. See [THIRD_PARTY_NOTICES.txt](dist/documents/THIRD_PARTY_NOTICES.txt).
+The binary package includes Microsoft's `WebView2Loader.dll`; its license and notice are preserved in `docs/distribution`. See [THIRD_PARTY_NOTICES.txt](docs/distribution/THIRD_PARTY_NOTICES.txt).
 
 ## Disclaimer
 

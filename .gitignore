@@ -5,14 +5,13 @@ __pycache__/
 venv/
 .env
 
-# Native intermediate files
-core/native/*.dll
-core/native/*.o
+# Build intermediates
+build/
 tests/*.exe
 
 # Distribution binaries
-dist/binary/*
-!dist/binary/.gitkeep
+dist/*
+!dist/.gitkeep
 
 # Logs and local tooling
 *.log

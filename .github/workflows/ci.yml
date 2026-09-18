@@ -34,11 +34,11 @@ jobs:
         shell: pwsh
         run: |
           $env:PYTHONIOENCODING = 'utf-8'
-          python build_native.py
+          python scripts/build.py
           if ($LASTEXITCODE -ne 0) { throw 'Native build failed' }
       - name: CLI smoke test
         shell: pwsh
-        run: .\dist\binary\Quick7Zip_cli.exe --help
+        run: .\dist\Quick7Zip_cli.exe --help
       - name: Engine tests
         shell: pwsh
         run: python tests/run_tests.py
