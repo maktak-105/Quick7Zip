@@ -1,9 +1,9 @@
 # Quick7Zip
-[日本語版 README_jp.md](README_jp.md)
 
 Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It analyzes storage type, CPU, memory, file count, total size, and file composition before selecting practical compression options.
 
-> Stable release v2.1.0.
+> Stable release v2.2.0.
+> [GitHub Releases](https://github.com/maktak-105/Quick7Zip/releases)
 
 ## What makes it different
 

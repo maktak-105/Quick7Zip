@@ -7,6 +7,11 @@
 - Second digit: bug fixes
 - Third digit: documentation and other changes
 
+## 2.2.0 (2026-09-18)
+
+- Improved folder and file selection handling in the explorer browse dialog (allow selecting a folder directly without navigating into it).
+- Updated input placeholder text to "Folder or file (Browse)".
+
 ## 2.1.0 (2026-09-18)
 
 - Modernized the input Browse dialog using the native Windows Explorer style (`IFileOpenDialog`).

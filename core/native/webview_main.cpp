@@ -11,11 +11,13 @@
 #include <shlobj.h>
 #include <shobjidl.h>
 #include <shlwapi.h>
+#include <commctrl.h>
 #include <WebView2.h>
 
 #include "engine.h"
 
 #include <atomic>
+#include <algorithm>
 #include <cwctype>
 #include <filesystem>
 #include <functional>
@@ -446,8 +448,83 @@ std::wstring GetUserHomeFolder() {
 
 class FileOrFolderDialogEvents : public IFileDialogEvents {
     LONG m_ref = 1;
+    IFileOpenDialog* m_dialog = nullptr;
+    HWND m_hDlg = nullptr;
 public:
+    bool okPressed = false;
+    std::wstring folderChosen;
     std::wstring lastSelectedPath;
+    std::vector<std::wstring> selectedPaths;
+
+    FileOrFolderDialogEvents(IFileOpenDialog* dialog) : m_dialog(dialog) {}
+    ~FileOrFolderDialogEvents() { DetachHwnd(); }
+
+    void AttachHwnd(HWND hDlg) {
+        if (!m_hDlg && hDlg) {
+            m_hDlg = hDlg;
+            SetWindowSubclass(hDlg, SubclassProc, 1001, reinterpret_cast<DWORD_PTR>(this));
+        }
+    }
+
+    void DetachHwnd() {
+        if (m_hDlg) {
+            RemoveWindowSubclass(m_hDlg, SubclassProc, 1001);
+            m_hDlg = nullptr;
+        }
+    }
+
+    void CaptureSelectedItems(IFileDialog* pfd) {
+        if (!pfd) return;
+        IServiceProvider* psp = nullptr;
+        if (SUCCEEDED(pfd->QueryInterface(IID_PPV_ARGS(&psp)))) {
+            IFolderView* pfv = nullptr;
+            if (SUCCEEDED(psp->QueryService(SID_SFolderView, IID_PPV_ARGS(&pfv)))) {
+                IShellItemArray* psia = nullptr;
+                if (SUCCEEDED(pfv->Items(SVGIO_SELECTION, IID_PPV_ARGS(&psia)))) {
+                    DWORD count = 0;
+                    psia->GetCount(&count);
+                    for (DWORD i = 0; i < count; ++i) {
+                        IShellItem* psi = nullptr;
+                        if (SUCCEEDED(psia->GetItemAt(i, &psi))) {
+                            PWSTR pszPath = nullptr;
+                            if (SUCCEEDED(psi->GetDisplayName(SIGDN_FILESYSPATH, &pszPath)) && pszPath) {
+                                selectedPaths.push_back(pszPath);
+                                CoTaskMemFree(pszPath);
+                            }
+                            psi->Release();
+                        }
+                    }
+                    psia->Release();
+                }
+                pfv->Release();
+            }
+            psp->Release();
+        }
+    }
+
+    static LRESULT CALLBACK SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData) {
+        auto* self = reinterpret_cast<FileOrFolderDialogEvents*>(dwRefData);
+        if (uMsg == WM_COMMAND) {
+            WORD id = LOWORD(wParam);
+            WORD code = HIWORD(wParam);
+            if (id == IDOK && (code == BN_CLICKED || code == 0)) {
+                self->okPressed = true;
+                self->CaptureSelectedItems(self->m_dialog);
+                if (!self->selectedPaths.empty()) {
+                    PostMessageW(hWnd, WM_CLOSE, 0, 0);
+                    return 0;
+                }
+            }
+        } else if (uMsg == WM_KEYDOWN && wParam == VK_RETURN) {
+            self->okPressed = true;
+            self->CaptureSelectedItems(self->m_dialog);
+            if (!self->selectedPaths.empty()) {
+                PostMessageW(hWnd, WM_CLOSE, 0, 0);
+                return 0;
+            }
+        }
+        return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+    }
 
     IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv) override {
         if (riid == IID_IUnknown || riid == IID_IFileDialogEvents) {
@@ -478,12 +555,53 @@ public:
         return S_OK;
     }
 
-    IFACEMETHODIMP OnFileOk(IFileDialog*) override { return S_OK; }
-    IFACEMETHODIMP OnFolderChanging(IFileDialog*, IShellItem*) override { return S_OK; }
-    IFACEMETHODIMP OnFolderChange(IFileDialog*) override {
+    IFACEMETHODIMP OnFileOk(IFileDialog* pfd) override {
+        if (selectedPaths.empty()) {
+            CaptureSelectedItems(pfd);
+        }
+        okPressed = false;
+        return S_OK;
+    }
+
+    IFACEMETHODIMP OnFolderChanging(IFileDialog* pfd, IShellItem* psiFolder) override {
+        if (okPressed && psiFolder) {
+            if (selectedPaths.empty()) {
+                CaptureSelectedItems(pfd);
+            }
+            if (selectedPaths.empty()) {
+                PWSTR pszPath = nullptr;
+                if (SUCCEEDED(psiFolder->GetDisplayName(SIGDN_FILESYSPATH, &pszPath)) && pszPath) {
+                    folderChosen = pszPath;
+                    CoTaskMemFree(pszPath);
+                }
+            }
+            if (m_hDlg) {
+                PostMessageW(m_hDlg, WM_CLOSE, 0, 0);
+            } else {
+                pfd->Close(S_OK);
+            }
+            return S_FALSE;
+        }
+        okPressed = false;
+        return S_OK;
+    }
+
+    IFACEMETHODIMP OnFolderChange(IFileDialog* pfd) override {
+        if (!m_hDlg) {
+            IOleWindow* oleWnd = nullptr;
+            if (SUCCEEDED(pfd->QueryInterface(IID_PPV_ARGS(&oleWnd)))) {
+                HWND hDlg = nullptr;
+                if (SUCCEEDED(oleWnd->GetWindow(&hDlg)) && hDlg) {
+                    AttachHwnd(hDlg);
+                }
+                oleWnd->Release();
+            }
+        }
+        okPressed = false;
         lastSelectedPath.clear();
         return S_OK;
     }
+
     IFACEMETHODIMP OnShareViolation(IFileDialog*, IShellItem*, FDE_SHAREVIOLATION_RESPONSE* pResponse) override {
         *pResponse = FDESVR_DEFAULT;
         return S_OK;
@@ -504,7 +622,7 @@ std::vector<std::wstring> PickFileOrFolder(const std::wstring& initialDir = {}) 
     dialog->GetOptions(&options);
     dialog->SetOptions(options | FOS_ALLOWMULTISELECT | FOS_DONTADDTORECENT | FOS_NOVALIDATE | FOS_PATHMUSTEXIST);
 
-    FileOrFolderDialogEvents* events = new FileOrFolderDialogEvents();
+    FileOrFolderDialogEvents* events = new FileOrFolderDialogEvents(dialog);
     DWORD cookie = 0;
     dialog->Advise(events, &cookie);
 
@@ -525,7 +643,12 @@ std::vector<std::wstring> PickFileOrFolder(const std::wstring& initialDir = {}) 
     }
 
     std::vector<std::wstring> results;
-    if (SUCCEEDED(dialog->Show(g_window))) {
+    HRESULT showHr = dialog->Show(g_window);
+    if (!events->selectedPaths.empty()) {
+        results = std::move(events->selectedPaths);
+    } else if (!events->folderChosen.empty()) {
+        results.push_back(events->folderChosen);
+    } else if (SUCCEEDED(showHr)) {
         IShellItemArray* items = nullptr;
         if (SUCCEEDED(dialog->GetResults(&items)) && items) {
             DWORD count = 0;
@@ -543,10 +666,19 @@ std::vector<std::wstring> PickFileOrFolder(const std::wstring& initialDir = {}) 
             }
             items->Release();
         }
-        if (results.empty() && !events->lastSelectedPath.empty()) {
-            results.push_back(events->lastSelectedPath);
+    }
+    if (results.empty() && !events->lastSelectedPath.empty()) {
+        results.push_back(events->lastSelectedPath);
+    }
+
+    // 重複除去
+    std::vector<std::wstring> uniqueResults;
+    for (const auto& p : results) {
+        if (!p.empty() && std::find(uniqueResults.begin(), uniqueResults.end(), p) == uniqueResults.end()) {
+            uniqueResults.push_back(p);
         }
     }
+    results = std::move(uniqueResults);
 
     dialog->Unadvise(cookie);
     events->Release();

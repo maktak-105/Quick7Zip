@@ -67,7 +67,7 @@ def build():
     run(common + [engine, os.path.join(native, "main_cli.cpp"), resource,
          "-o", os.path.join(binary, f"{APP_NAME}_cli.exe")] + libraries)
 
-    gui_libraries = libraries + ["-luser32", "-lgdi32", "-lole32", "-loleaut32", "-luuid", "-lshell32"]
+    gui_libraries = libraries + ["-luser32", "-lgdi32", "-lole32", "-loleaut32", "-luuid", "-lshell32", "-lcomctl32"]
     run(common + ["-mwindows", f"-I{include}", engine, os.path.join(native, "webview_main.cpp"), resource,
          "-o", os.path.join(binary, f"{APP_NAME}.exe")] + gui_libraries)
 
