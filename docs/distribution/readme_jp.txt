@@ -40,6 +40,13 @@ CLIはQuick7Zip_cli.exeです。`Quick7Zip_cli.exe --help`でオプションを�
 - THIRD_PARTY_NOTICES.txt
 - WEBVIEW2_LICENSE.txt / WEBVIEW2_NOTICE.txt
 
+SHA-256
+-------
+配布バイナリおよびZIPパッケージの公式SHA-256チェックサムは、CI（GitHub Actions）の
+ビルド時に自動算出され、GitHub Releasesの各リリースに `SHA256SUMS.txt` として添付されています。
+整合性確認にはリリースページ添付の `SHA256SUMS.txt` を参照してください:
+https://github.com/maktak-105/Quick7Zip/releases
+
 ライセンス
 ----------
 Quick7ZipはMIT Licenseです。7-Zipは別ソフトウェアであり再配布しません。

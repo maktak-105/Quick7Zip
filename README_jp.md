@@ -21,6 +21,32 @@ Quick7Zipは、インストール済みの7-Zipを利用するWindows向け自�
 - 明示的に指定した既存の出力アーカイブは置き換えます（上書き保存に対応）。
 - 日本語／英語UI、GUI／CLIで同じネイティブエンジンを利用します。
 
+## 配布版を使う
+
+ソースコードやビルド環境がない場合は、GitHub Releasesから配布用ZIPをダウンロードしてください。
+
+- [最新版の配布ページ](https://github.com/maktak-105/Quick7Zip/releases)
+- [Quick7Zip v2.2.1](https://github.com/maktak-105/Quick7Zip/releases/tag/v2.2.1)
+- [Quick7Zip-binary.zipを直接ダウンロード](https://github.com/maktak-105/Quick7Zip/releases/download/v2.2.1/Quick7Zip-binary.zip)
+
+ZIPを展開すると、すべての配布ファイルが同じフォルダに入ります。
+
+- `Quick7Zip.exe` - GUI版（自己完結HTML内蔵）
+- `Quick7Zip_cli.exe` - コマンドライン版
+- `WebView2Loader.dll` - WebView2接続用ローダー
+- `readme.txt` / `readme_jp.txt` - 使用説明書
+- `history.txt` / `history_jp.txt` - 更新履歴
+- `LICENSE.txt` / `LICENSE_jp.txt` - MIT License
+- `THIRD_PARTY_NOTICES.txt` / `WEBVIEW2_LICENSE.txt` / `WEBVIEW2_NOTICE.txt` - サードパーティ通知・ライセンス
+
+### 完全性の確認（SHA-256）
+
+配布用ZIPおよび各バイナリの公式SHA-256チェックサムは、CI（GitHub Actions）のビルド時に自動算出され、GitHub Releasesの各リリースに `SHA256SUMS.txt` として添付されています。ダウンロード後の整合性確認には `SHA256SUMS.txt` を参照してください。
+
+```powershell
+Get-FileHash .\Quick7Zip-binary.zip -Algorithm SHA256
+```
+
 ## 動作環境
 
 - Windows 10 / 11（64-bit）
@@ -32,10 +58,11 @@ Quick7Zipは、インストール済みの7-Zipを利用するWindows向け自�
 MinGW-w64を導入し、WebView2 SDKを`C:\tools\webview2`へ配置するか、`WEBVIEW2_INCLUDE`と`WEBVIEW2_LOADER`を設定します。
 
 ```powershell
-build.bat
+scripts\build.bat
+# または python scripts/build.py
 ```
 
-`dist\binary`へ次を生成します。
+`dist`へ次を生成します。
 
 - `Quick7Zip.exe`
 - `Quick7Zip_cli.exe`

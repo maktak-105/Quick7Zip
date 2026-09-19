@@ -62,12 +62,33 @@ jobs:
           New-Item -ItemType Directory -Path $staging -Force | Out-Null
           foreach ($file in $files) { Copy-Item -LiteralPath $file -Destination $staging -Force }
           Compress-Archive -Path (Join-Path $staging '*') -DestinationPath (Join-Path $env:GITHUB_WORKSPACE 'Quick7Zip-binary.zip') -Force
+      - name: Generate SHA-256 checksums
+        shell: pwsh
+        run: |
+          $checksumFile = Join-Path $env:GITHUB_WORKSPACE 'SHA256SUMS.txt'
+          $lines = @()
+          $zipPath = Join-Path $env:GITHUB_WORKSPACE 'Quick7Zip-binary.zip'
+          $zipHash = (Get-FileHash -Algorithm SHA256 -Path $zipPath).Hash.ToUpper()
+          $lines += "$zipHash  Quick7Zip-binary.zip"
+          $lines += ""
+          $lines += "# Binaries inside archive:"
+          $binFiles = @('dist/Quick7Zip.exe', 'dist/Quick7Zip_cli.exe', 'dist/WebView2Loader.dll')
+          foreach ($f in $binFiles) {
+            if (Test-Path -LiteralPath $f) {
+              $h = (Get-FileHash -Algorithm SHA256 -Path $f).Hash.ToUpper()
+              $name = Split-Path -Leaf $f
+              $lines += "$h  $name"
+            }
+          }
+          $lines | Set-Content -Path $checksumFile -Encoding utf8
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
           name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-          files: Quick7Zip-binary.zip
+          files: |
+            Quick7Zip-binary.zip
+            SHA256SUMS.txt
           overwrite_files: true
           generate_release_notes: true
           body: |
