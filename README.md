@@ -20,6 +20,32 @@ Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It
 - Replaces an explicitly selected existing output archive.
 - Provides Japanese and English UI, GUI and CLI from one native engine.
 
+## Using the binary release
+
+If you do not need the source code or a build environment, download the distribution ZIP from GitHub Releases.
+
+- [Latest releases](https://github.com/maktak-105/Quick7Zip/releases)
+- [Quick7Zip v2.2.1](https://github.com/maktak-105/Quick7Zip/releases/tag/v2.2.1)
+- [Direct download of Quick7Zip-binary.zip](https://github.com/maktak-105/Quick7Zip/releases/download/v2.2.1/Quick7Zip-binary.zip)
+
+The ZIP contains all distribution files in one flat folder:
+
+- `Quick7Zip.exe` - GUI version (embedded HTML UI)
+- `Quick7Zip_cli.exe` - command-line version
+- `WebView2Loader.dll` - WebView2 loader
+- `readme.txt` / `readme_jp.txt` - distribution documentation
+- `history.txt` / `history_jp.txt` - change log
+- `LICENSE.txt` / `LICENSE_jp.txt` - MIT License files
+- `THIRD_PARTY_NOTICES.txt` / `WEBVIEW2_LICENSE.txt` / `WEBVIEW2_NOTICE.txt` - third-party notices
+
+### Integrity verification (SHA-256)
+
+Official SHA-256 checksums for the distribution ZIP and binaries are automatically computed during the CI (GitHub Actions) build and published as `SHA256SUMS.txt` on each release page. Verify the downloaded package with PowerShell:
+
+```powershell
+Get-FileHash .\Quick7Zip-binary.zip -Algorithm SHA256
+```
+
 ## Requirements
 
 - Windows 10 or 11 (64-bit)
@@ -31,10 +57,11 @@ Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It
 Install MinGW-w64 and place the WebView2 SDK under `C:\tools\webview2`, or set `WEBVIEW2_INCLUDE` and `WEBVIEW2_LOADER`.
 
 ```powershell
-build.bat
+scripts\build.bat
+# or python scripts/build.py
 ```
 
-Outputs are created in `dist\binary`:
+Outputs are created in `dist`:
 
 - `Quick7Zip.exe`
 - `Quick7Zip_cli.exe`

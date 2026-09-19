@@ -40,6 +40,12 @@ Distribution files
 - THIRD_PARTY_NOTICES.txt
 - WEBVIEW2_LICENSE.txt / WEBVIEW2_NOTICE.txt
 
+SHA-256
+-------
+Official SHA-256 checksums are generated automatically by CI (GitHub Actions)
+and published as `SHA256SUMS.txt` on the GitHub Releases page:
+https://github.com/maktak-105/Quick7Zip/releases
+
 License
 -------
 Quick7Zip is MIT licensed. 7-Zip is separate software and is not redistributed.
