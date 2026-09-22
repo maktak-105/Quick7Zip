@@ -1030,6 +1030,23 @@ public:
     }
 };
 
+// The window content is dark HTML, so the system title bar must be dark as well. dwmapi is looked up at run time
+// (no extra import library). Attribute 20 = DWMWA_USE_IMMERSIVE_DARK_MODE (Windows 10 build 18985 and later,
+// Windows 11); 19 is the same switch on earlier Windows 10 builds.
+void ApplyDarkTitleBar(HWND window) {
+    HMODULE dwm = LoadLibraryW(L"dwmapi.dll");
+    if (!dwm) return;
+    using SetAttributeFn = HRESULT(WINAPI*)(HWND, DWORD, LPCVOID, DWORD);
+    const auto setAttribute = reinterpret_cast<SetAttributeFn>(GetProcAddress(dwm, "DwmSetWindowAttribute"));
+    if (setAttribute) {
+        const BOOL enabled = TRUE;
+        if (FAILED(setAttribute(window, 20, &enabled, sizeof(enabled)))) {
+            setAttribute(window, 19, &enabled, sizeof(enabled));
+        }
+    }
+    FreeLibrary(dwm);
+}
+
 LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
     switch (message) {
         case WM_COPYDATA: {
@@ -1183,6 +1200,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
         CoUninitialize();
         return 2;
     }
+    ApplyDarkTitleBar(g_window);
     const UINT windowDpi = GetDpiForWindow(g_window);
     if (windowDpi != USER_DEFAULT_SCREEN_DPI) {
         SetWindowPos(g_window, nullptr, 0, 0,
