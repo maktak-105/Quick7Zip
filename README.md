@@ -2,12 +2,12 @@
 
 Quick7Zip is an adaptive Windows frontend for an existing 7-Zip installation. It analyzes storage type, CPU, memory, file count, total size, and file composition before selecting practical compression options.
 
-> Stable release v2.2.1.
+> Stable release v2.3.0.
 > [GitHub Releases](https://github.com/maktak-105/Quick7Zip/releases)
 
 ## What makes it different
 
-- Integrates into Windows Explorer context menu (configurable in Settings, enabled by default).
+- Integrates into Windows Explorer context menu (asks on first start whether to add it; can be changed later in Settings).
 - Detects the installed `7z.exe`; 7-Zip is not bundled.
 - Selects compression level, thread count, solid mode, and type sorting from the actual workload.
 - Uses 7-Zip's own defaults for dictionary size, word size, and solid block size; these parameters are not benchmark-tuned by Quick7Zip.
@@ -27,8 +27,8 @@ Code signing: Free code signing provided by [SignPath.io](https://signpath.io), 
 If you do not need the source code or a build environment, download the distribution ZIP from GitHub Releases.
 
 - [Latest releases](https://github.com/maktak-105/Quick7Zip/releases)
-- [Quick7Zip v2.2.1](https://github.com/maktak-105/Quick7Zip/releases/tag/v2.2.1)
-- [Direct download of Quick7Zip-binary.zip](https://github.com/maktak-105/Quick7Zip/releases/download/v2.2.1/Quick7Zip-binary.zip)
+- [Quick7Zip v2.3.0](https://github.com/maktak-105/Quick7Zip/releases/tag/v2.3.0)
+- [Direct download of Quick7Zip-binary.zip](https://github.com/maktak-105/Quick7Zip/releases/download/v2.3.0/Quick7Zip-binary.zip)
 
 The ZIP contains all distribution files in one flat folder:
 

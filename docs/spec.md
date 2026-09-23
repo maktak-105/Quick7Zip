@@ -3,7 +3,7 @@
 
 ## Overview
 
-Quick7Zip is a Windows 10/11 x64 application that analyzes source folders, files (including multi-selection), or drives and runs an existing 7-Zip installation with adaptive options. Version: v2.2.1 stable release.
+Quick7Zip is a Windows 10/11 x64 application that analyzes source folders, files (including multi-selection), or drives and runs an existing 7-Zip installation with adaptive options. Version: v2.3.0 stable release.
 
 At startup Quick7Zip detects the installed 7-Zip executable and accepts version 26.02 or newer; older or missing installations are rejected.
 

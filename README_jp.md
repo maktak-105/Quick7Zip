@@ -2,12 +2,12 @@
 
 Quick7Zipは、インストール済みの7-Zipを利用するWindows向け自動最適化フロントエンドです。ストレージ種別、CPU、メモリ、ファイル数、合計サイズ、ファイル構成を分析してから、実用的な圧縮オプションを選択します。
 
-> v2.2.1正式リリースです。
+> v2.3.0正式リリースです。
 > [GitHub Releases](https://github.com/maktak-105/Quick7Zip/releases)
 
 ## 差別化ポイント
 
-- エクスプローラーの右クリックメニューから直接起動可能（設定画面でON/OFF切替可能、初期値ON）。複数ファイル選択時も1つのウィンドウに集約して一括圧縮します。
+- エクスプローラーの右クリックメニューから直接起動可能（初回起動時に追加するかを確認。あとから設定画面でON/OFF切替可能）。複数ファイル選択時も1つのウィンドウに集約して一括圧縮します。
 - 複数ファイル・フォルダの一括選択に対応（カンマ区切り・横スクロール表示）。
 - インストール済みの`7z.exe`を検出し、7-Zip本体は同梱しません。
 - 実データから圧縮レベル、スレッド数、ソリッド圧縮、種類順ソートを選択します。
@@ -28,8 +28,8 @@ Quick7Zipは、インストール済みの7-Zipを利用するWindows向け自�
 ソースコードやビルド環境がない場合は、GitHub Releasesから配布用ZIPをダウンロードしてください。
 
 - [最新版の配布ページ](https://github.com/maktak-105/Quick7Zip/releases)
-- [Quick7Zip v2.2.1](https://github.com/maktak-105/Quick7Zip/releases/tag/v2.2.1)
-- [Quick7Zip-binary.zipを直接ダウンロード](https://github.com/maktak-105/Quick7Zip/releases/download/v2.2.1/Quick7Zip-binary.zip)
+- [Quick7Zip v2.3.0](https://github.com/maktak-105/Quick7Zip/releases/tag/v2.3.0)
+- [Quick7Zip-binary.zipを直接ダウンロード](https://github.com/maktak-105/Quick7Zip/releases/download/v2.3.0/Quick7Zip-binary.zip)
 
 ZIPを展開すると、すべての配布ファイルが同じフォルダに入ります。
 

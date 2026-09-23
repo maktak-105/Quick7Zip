@@ -286,7 +286,14 @@ void EnsureInitialContextMenu() {
         RegCloseKey(appKey);
     }
     if (!alreadyConfigured) {
-        SetContextMenuEnabled(true);
+        // First run: ask before changing the Explorer context menu; the answer is stored either way.
+        const int answer = MessageBoxW(nullptr,
+            L"Add \"Quick7Zip\" to the Explorer right-click menu for this user?\n"
+            L"You can change this later in Settings.\n\n"
+            L"エクスプローラーの右クリックメニューに「Quick7Zip で圧縮」を追加しますか？\n"
+            L"あとで設定から変更できます。",
+            L"Quick7Zip", MB_YESNO | MB_ICONQUESTION | MB_SETFOREGROUND);
+        SetContextMenuEnabled(answer == IDYES);
     } else if (isEnabled) {
         SetContextMenuEnabled(true);
     }
