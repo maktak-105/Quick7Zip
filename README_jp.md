@@ -2,7 +2,7 @@
 
 Quick7Zipは、インストール済みの7-Zipを利用するWindows向け自動最適化フロントエンドです。ストレージ種別、CPU、メモリ、ファイル数、合計サイズ、ファイル構成を分析してから、実用的な圧縮オプションを選択します。
 
-> v2.2.1正式リリースです。
+> v2.3.0正式リリースです。
 > [GitHub Releases](https://github.com/maktak-105/Quick7Zip/releases)
 
 ## 差別化ポイント
@@ -28,8 +28,8 @@ Quick7Zipは、インストール済みの7-Zipを利用するWindows向け自�
 ソースコードやビルド環境がない場合は、GitHub Releasesから配布用ZIPをダウンロードしてください。
 
 - [最新版の配布ページ](https://github.com/maktak-105/Quick7Zip/releases)
-- [Quick7Zip v2.2.1](https://github.com/maktak-105/Quick7Zip/releases/tag/v2.2.1)
-- [Quick7Zip-binary.zipを直接ダウンロード](https://github.com/maktak-105/Quick7Zip/releases/download/v2.2.1/Quick7Zip-binary.zip)
+- [Quick7Zip v2.3.0](https://github.com/maktak-105/Quick7Zip/releases/tag/v2.3.0)
+- [Quick7Zip-binary.zipを直接ダウンロード](https://github.com/maktak-105/Quick7Zip/releases/download/v2.3.0/Quick7Zip-binary.zip)
 
 ZIPを展開すると、すべての配布ファイルが同じフォルダに入ります。
 

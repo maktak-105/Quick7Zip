@@ -7,6 +7,11 @@
 - Second digit: bug fixes
 - Third digit: documentation and other changes
 
+## 2.3.0 (2026-09-23)
+
+- On first start, ask before adding the Explorer right-click menu entry (previously added without asking). The answer is saved and can be changed later in Settings.
+- Aligned the version shown in the executable and documents (v2.2.2 still carried 2.2.1 metadata).
+
 ## 2.2.1 (2026-09-18)
 
 - Adopted Quick series standard project directory template (reorganized source, scripts, and documentation).
