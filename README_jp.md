@@ -23,6 +23,8 @@ Quick7Zipは、インストール済みの7-Zipを利用するWindows向け自�
 
 ## 配布版を使う
 
+コード署名: [SignPath.io](https://signpath.io) による無償のコード署名を利用し、証明書は [SignPath Foundation](https://signpath.org) が発行します。現在申請中で、承認後に公開するリリースから署名されます。詳細は [コード署名ポリシー](docs/code_signing_policy.md)。
+
 ソースコードやビルド環境がない場合は、GitHub Releasesから配布用ZIPをダウンロードしてください。
 
 - [最新版の配布ページ](https://github.com/maktak-105/Quick7Zip/releases)
